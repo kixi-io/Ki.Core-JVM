@@ -21,7 +21,7 @@ class Reflect {
             val tests = ArrayList<Test>()
 
             if (directory.exists()) {
-                // Get the list of the files contained in the package
+                // Get the list of the files contained in t  package
                 directory.walk()
                     .filter { f -> f.isFile() && f.name.contains('$') == false && f.name.endsWith(".class") }
                     .forEach {
