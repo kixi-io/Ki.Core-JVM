@@ -13,45 +13,16 @@ import ki.text.size
  *  3. Micro version: A positive integer
  *  4. Qualifier: A string such as "alpha" or "beta", allows alphanum, '_' and '-'
  */
-class Version : Comparable<Any?> {
-
-    var major = 0
-    var minor = 0
-    var micro = 0
-
-    var qualifier = ""
-
-    constructor(major: Int = 0, minor: Int = 0, micro: Int = 0, qualifier: String = "") {
-        this.major = major
-        this.minor = minor
-        this.micro = micro
-        this.qualifier = qualifier
-    }
+data class Version (var major: Int, var minor: Int = 0, var micro: Int = 0, var qualifier: String = "") :
+    Comparable<Any?> {
 
     override fun toString(): String {
-        val base = major.toString() + '.' + minor + '.'+ micro
-        return if (qualifier.length == 0) base else base + '.' + qualifier
-    }
-
-    override fun hashCode(): Int = ((major shl 24) + (minor shl 16) + (micro shl 8) + qualifier.hashCode())
-
-    override fun equals(other: Any?): Boolean {
-        if (other === this) { // quicktest
-            return true
-        }
-        if(other == null) return false;
-
-        if (other !is Version) {
-            return false
-        }
-
-        return (major == other.major && minor == other.minor && micro == other.micro && qualifier == other.qualifier)
+        val base = "$major.$minor.$micro"
+        return if (qualifier.length == 0) base else "$base.$qualifier"
     }
 
     override operator fun compareTo(other: Any?): Int {
-        if (other === this) { // quicktest
-            return 0
-        }
+        if (other === this) return 0
 
         other as Version
 
@@ -71,12 +42,16 @@ class Version : Comparable<Any?> {
 
     companion object {
         val EMPTY = Version(0)
+        val MIN = Version(Int.MIN_VALUE, Int.MIN_VALUE, Int.MIN_VALUE, "A")
+        val MAX = Version(Int.MAX_VALUE, Int.MAX_VALUE, Int.MAX_VALUE, "Z")
         var FORMAT_ERROR_STRING = "Use: major.minor.micro.qualifier. Only 'major' is required."
 
         /**
-         * Create a version from a string with the format: major('.'minor('.'micro('.'qualifier)?)?)?
+         * Create a version from a string with the format:
+         *      major('.'minor('.'micro('.'qualifier)?)?)?
          *
-         * All number components must be positive and the qualifier chars must be alphanum, '_' or '-'.
+         * All number components must be positive and the qualifier chars must be
+         * alphanum, '_' or '-'.
          *
          * @throws ParseException If `version` is improperly formatted.
          */
@@ -135,8 +110,8 @@ class Version : Comparable<Any?> {
                 val qualifierText = comps[3];
                 if(qualifierText.isEmpty()) {
                     throw ParseException("'qualifier' component of Version cannot be empty.");
-                } else if(!qualifierText.isKiIdentifier(allowDash = true)) {
-                    throw ParseException("'qualifier' component is not a valid KiID. Format: [alpha|_][alphanum|_|-]*");
+                } else if(!qualifierText.isKiIdentifier()) {
+                    throw ParseException("'qualifier' component is not a valid KiID.")
                 }
                 qualifier = qualifierText
             }
@@ -145,17 +120,3 @@ class Version : Comparable<Any?> {
         }
     }
 }
-
-/*
-fun main() {
-    log(Version(2,0,1,"beta"))
-    log(Version(2))
-    log(Version.parse("5.2.3.alpha"))
-    log(Version.parse("5"))
-    try {
-        log(Version.parse("5.2a"))
-    } catch(pe:ParseException) {
-        log(pe.message)
-    }
-}
- */

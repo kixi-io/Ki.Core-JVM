@@ -1,6 +1,8 @@
 package ki.text
 
-class ParseException : RuntimeException {
+import kotlin.reflect.typeOf
+
+open class ParseException : RuntimeException {
 
     var line = -1
     var index = -1
@@ -10,15 +12,17 @@ class ParseException : RuntimeException {
         this.line = line
     }
 
-    override fun getLocalizedMessage(): String {
-        var msg = if(message.isNullOrEmpty()) "ParseException" else "ParseException: \"$message\""
+    override val message: String?
+        get() {
+            var msg = if(message.isNullOrEmpty()) this::class.simpleName
+            else "${this::class.simpleName} \"$message\""
 
-        if(line!=-1) msg+= " line: $line"
-        if(index!=-1) msg+= " index: $index"
-        if(cause!=null) msg+= " cause: $cause.message"
+            if(line!=-1) msg+= " line: $line"
+            if(index!=-1) msg+= " index: $index"
+            if(cause!=null) msg+= " cause: $cause.message"
 
-        return msg;
-    }
+            return msg
+        }
 
     override fun toString() : String = getLocalizedMessage()
 }

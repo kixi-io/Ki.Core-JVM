@@ -2,6 +2,8 @@ package ki.text
 
 import java.util.*
 
+import ki.log
+
 fun CharSequence.toList(delimiters:String = " \t", trim:Boolean = true, list:MutableList<String> = ArrayList<String>()):
         List<String> {
 
@@ -39,18 +41,12 @@ fun CharSequence.countAlphaNum(): Int {
     return i
 }
 
-fun CharSequence.isKiIdentifier(allowDash:Boolean = false): Boolean {
-
-    if(this.isEmpty() || !this[0].isKiIDStart() || this.equals("_")) return false
-
-    for(c in this) {
-        if(!(c.isKiIDChar() || (allowDash && c=='-'))) return false
-    }
+fun CharSequence.isKiIdentifier(): Boolean {
+    if (this.isEmpty() || !this[0].isKiIDStart() || this.equals("_"))
+        return false
 
     return true
 }
-
-
 
 val CharSequence.size: Int get() = this.length;
 
@@ -115,13 +111,17 @@ fun String.resolveEscapes(quoteChar:Char = '"'): String {
     return sb.toString()
 }
 
-fun Char.isKiIDStart(): Boolean = this.isLetter() || this=='_'
+// What we really want is  this.isLetter() || this=='_' || this.isEmojiSurrogate, but
+// I haven't put together the ranges for the latter, so this works for now.
 
-fun Char.isKiIDChar(): Boolean = this.isLetterOrDigit() || this=='_'
+/**
+ * Returns true for any unicode letter, '_', '$' or emoji surrogate.
+ */
+fun Char.isKiIDStart(): Boolean = this.isLetter() || this=='_' || this=='$' ||
+        this.isSurrogate()
 
-/*
-val Char.isEmoji: Boolean
-    get() {
-        return ...
-    }
-*/
+/**
+ * Returns true for any unicode letter, digit, '_', '$' or emoji surrogate.
+ */
+fun Char.isKiIDChar(): Boolean = this.isKiIDStart() || this.isDigit()
+
