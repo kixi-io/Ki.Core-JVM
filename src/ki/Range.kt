@@ -32,8 +32,8 @@ data class Range<T : Comparable<T>>(val left:T, val right:T,
     }
 
     override fun toString(): String {
-        val leftString = if (openLeft) "_" else left.toString()
-        val rightString = if (openRight) "_" else right.toString()
+        val leftString = if (openLeft) "_" else Ki.format(left)
+        val rightString = if (openRight) "_" else Ki.format(right)
 
         return leftString + type.operator + rightString
     }
