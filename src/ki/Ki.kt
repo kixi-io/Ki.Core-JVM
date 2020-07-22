@@ -1,5 +1,6 @@
 package ki
 
+import java.math.BigDecimal
 import java.time.format.DateTimeFormatter
 
 class Ki {
@@ -38,6 +39,8 @@ class Ki {
                 null -> "nil"
                 is String -> "\"$obj\""
                 is Char -> "'$obj'"
+                is BigDecimal -> "${obj}m"
+                is Float -> "${obj}f"
                 else -> obj.toString()
             }
         }

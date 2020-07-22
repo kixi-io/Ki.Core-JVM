@@ -12,6 +12,8 @@ import ki.text.size
  *  2. Minor version: A positive integer
  *  3. Micro version: A positive integer
  *  4. Qualifier: A string such as "alpha" or "beta", allows alphanum, '_' and '-'
+ *
+ *  // TODO: Change this to match Mavin versions.
  */
 data class Version (var major: Int, var minor: Int = 0, var micro: Int = 0, var qualifier: String = "") :
     Comparable<Any?> {
@@ -55,7 +57,7 @@ data class Version (var major: Int, var minor: Int = 0, var micro: Int = 0, var 
          *
          * @throws ParseException If `version` is improperly formatted.
          */
-        fun parse(version: String, delim:Char = '.') : Version {
+        @JvmStatic fun parse(version: String, delim:Char = '.') : Version {
 
             var major: Int
             var minor = 0

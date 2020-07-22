@@ -1,5 +1,6 @@
 package ki.test
 
+import ki.err
 import ki.log
 import java.io.File
 import java.net.URL
@@ -32,15 +33,16 @@ class Reflect {
                         try {
                             if (fullyQualifiedClassName.endsWith("Test")) {
                                 // TODO replace newInstance with current equivalent
-                                val o = Class.forName(fullyQualifiedClassName).newInstance() as Test
+                                val o = Class.forName(fullyQualifiedClassName)
+                                    .getDeclaredConstructor().newInstance() as Test
                                 tests.add(o)
                             }
                         } catch (cnfex: ClassNotFoundException) {
-                            System.err.println(cnfex)
+                            err(cnfex)
                         } catch (iex: InstantiationException) {
-                            System.err.println(iex)
+                            err(iex)
                         } catch (iaex: IllegalAccessException) {
-                            System.err.println(iaex)
+                            err(iaex)
                         }
                     }
             }

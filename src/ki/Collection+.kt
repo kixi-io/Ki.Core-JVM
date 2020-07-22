@@ -21,5 +21,3 @@ fun Array<*>.toString(separator: String? = ", "): String? {
     }
     return buffer.toString()
 }
-
-val Array<*>.size: Int get() = this.count();

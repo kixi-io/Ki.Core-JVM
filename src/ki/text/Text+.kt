@@ -41,13 +41,6 @@ fun CharSequence.countAlphaNum(): Int {
     return i
 }
 
-fun CharSequence.isKiIdentifier(): Boolean {
-    if (this.isEmpty() || !this[0].isKiIDStart() || this.equals("_"))
-        return false
-
-    return true
-}
-
 val CharSequence.size: Int get() = this.length;
 
 fun Char.unicodeEscape(): String {
@@ -111,17 +104,32 @@ fun String.resolveEscapes(quoteChar:Char = '"'): String {
     return sb.toString()
 }
 
-// What we really want is  this.isLetter() || this=='_' || this.isEmojiSurrogate, but
-// I haven't put together the ranges for the latter, so this works for now.
+// What we really want is  this.isLetter() || this=='_' || this=='$' ||
+// this.isEmojiSurrogate(), but I haven't put together the ranges for the latter, so this
+// works for now. It handles Unicode BMP emoji.
 
 /**
- * Returns true for any unicode letter, '_', '$' or emoji surrogate.
+ * Returns true for any unicode letter, '_', '$' or emoji.
+ *
+ * TODO: Fix - Currently only handles BMP emoji.
  */
 fun Char.isKiIDStart(): Boolean = this.isLetter() || this=='_' || this=='$' ||
         this.isSurrogate()
 
 /**
- * Returns true for any unicode letter, digit, '_', '$' or emoji surrogate.
+ * Returns true for any unicode letter, digit, '_', '$' or emoji.
+ *
+ * TODO: Fix - Currently only handles BMP emoji.
  */
-fun Char.isKiIDChar(): Boolean = this.isKiIDStart() || this.isDigit()
+fun Char.isKiIDChar(): Boolean = this.isKiIDStart() || this.isDigit() ||
+        this.isSurrogate()
+
+fun CharSequence.isKiIdentifier(): Boolean {
+    if (this.isEmpty() || !this[0].isKiIDStart() || this.equals("_"))
+        return false
+
+    for(c in this) if(!c.isKiIDChar()) return false
+
+    return true
+}
 

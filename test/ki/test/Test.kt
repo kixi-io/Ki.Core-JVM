@@ -2,41 +2,39 @@ package ki.test
 
 import ki.log
 import ki.err
-import java.io.File
-import java.net.URL
 
 open class Test {
 
     var testCount = 0
     var errors = 0
 
-    fun eq(test:String, o1:Any?, o2:Any?) {
-        if (o1 == o2) success(test, "== $o2") else fail(test, "$o1 != $o2 (expecting ==)")
+    fun eq(test:String, o1:Any?, o2:Any?, note:String = "") {
+        if (o1 == o2) success(test, "== $o2", note) else fail(test, "$o1 != $o2 (expecting ==)", note)
     }
 
-    fun notEq(test:String, o1:Any?, o2:Any?) {
-        if (o1 != o2) success(test, "$o1 != $o2") else fail(test, "== $o2 (expecting !=)")
+    fun notEq(test:String, o1:Any?, o2:Any?, note:String = "") {
+        if (o1 != o2) success(test, "$o1 != $o2", note) else fail(test, "== $o2 (expecting !=)", note)
     }
 
-    fun isTrue(test:String, bool:Boolean) {
-        if(bool) success(test, "$bool") else fail(test, "$bool (expecting true)")
+    fun isTrue(test:String, bool:Boolean, note:String = "") {
+        if(bool) success(test, "$bool", note) else fail(test, "$bool (expecting true)", note)
     }
 
-    fun isFalse(test:String, bool:Boolean) {
-        if(!bool) success(test, "$bool") else fail(test, "$bool (expecting false)\"")
+    fun isFalse(test:String, bool:Boolean, note:String = "") {
+        if(!bool) success(test, "$bool", note) else fail(test, "$bool (expecting false)\"", note)
     }
 
     fun banner(text:String) = log("  -- $text --")
 
-    private fun success(test:String, output:String) {
+    private fun success(test:String, output:String, note:String = "") {
         var message = if(test.isEmpty()) output else "$test: $output"
-        log("  Success: $message")
+        log("  Success: $message" + if(note.isEmpty()) "" else " # $note")
         testCount++
     }
 
-    private fun fail(test:String, output:String) {
+    private fun fail(test:String, output:String, note:String = "") {
         var message = if(test.isEmpty()) output else "$test: $output"
-        err("  Fail: $message")
+        err("  Fail: $message" + if(note.isEmpty()) "" else " # $note")
         testCount++
         errors++
     }
@@ -44,8 +42,6 @@ open class Test {
     open fun run() {
     }
 }
-
-// fun main() = Test().run()
 
 fun main() {
     val tests = Reflect.getTests("ki.text")
