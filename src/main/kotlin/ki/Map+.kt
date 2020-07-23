@@ -1,4 +1,4 @@
-package main.kotlin.ki
+package ki
 
 fun Map<*,*>.toString(separator: CharSequence = ", ", assignment: CharSequence = "="): String? {
     if(this.isEmpty()) return ""

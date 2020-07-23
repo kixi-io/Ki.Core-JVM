@@ -1,8 +1,8 @@
-package main.kotlin.ki.text
+package ki.text
 
 import java.util.*
 
-import main.kotlin.ki.log
+import ki.log
 
 fun CharSequence.toList(delimiters:String = " \t", trim:Boolean = true, list:MutableList<String> = ArrayList<String>()):
         List<String> {

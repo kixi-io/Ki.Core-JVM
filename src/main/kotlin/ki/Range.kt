@@ -1,4 +1,4 @@
-package main.kotlin.ki
+package ki
 
 /**
  * A Ki Range can be inclusive or exclusive on both ends, may be reversed (e.g. 5..1),
@@ -69,3 +69,4 @@ data class Range<T : Comparable<T>>(val left:T, val right:T,
         }
     }
 }
+

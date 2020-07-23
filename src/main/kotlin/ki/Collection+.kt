@@ -1,4 +1,4 @@
-package main.kotlin.ki
+package ki
 
 fun Collection<*>.toString(separator: String? = ", "): String? {
     if(this.isEmpty()) return ""

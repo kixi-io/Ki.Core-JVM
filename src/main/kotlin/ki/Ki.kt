@@ -1,4 +1,4 @@
-package main.kotlin.ki
+package ki
 
 import java.math.BigDecimal
 import java.time.format.DateTimeFormatter
@@ -30,8 +30,7 @@ class Ki {
          *
          * Note: Ki uses a 24 hour clock (0-23)
          */
-        const val DATE_TIME_FORMAT = DATE_FORMAT + "-" +
-                TIME_FORMAT
+        const val DATE_TIME_FORMAT = DATE_FORMAT + "-" + TIME_FORMAT
 
         // TODO support all Ki types
         fun format(obj: Any?): String {

@@ -1,8 +1,8 @@
-package main.kotlin.ki
+package ki
 
-import main.kotlin.ki.text.ParseException
-import main.kotlin.ki.text.countDigits
-import main.kotlin.ki.text.isKiIdentifier
+import ki.text.ParseException
+import ki.text.countDigits
+import ki.text.isKiIdentifier
 
 /**
  * Versions have four components:

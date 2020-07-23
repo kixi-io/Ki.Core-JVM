@@ -1,4 +1,4 @@
-package main.kotlin.ki
+package ki
 
 import java.io.PrintStream
 
@@ -24,5 +24,7 @@ fun out(vararg args:Any? /*, stream: PrintStream*/) : String {
 
     return printMe
 }
+
+
 
 

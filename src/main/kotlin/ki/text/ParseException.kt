@@ -1,10 +1,7 @@
-package main.kotlin.ki.text
-
-import main.kotlin.ki.log
-import kotlin.reflect.typeOf
+package ki.text
 
 /**
- * A ParseExcpetion represents an problem encountered while parsing text.
+ * A ParseException represents an problem encountered while parsing text.
  *
  * @property line Int The line on which the error occurred. If the text is a single line
  *     no line number is displayed.
@@ -46,22 +43,16 @@ open class ParseException : RuntimeException {
         this.index = index
     }
 
-    override val message: String?
-        get() {
-            var msg = if(super.message.isNullOrEmpty()) this::class.simpleName
-                else "${this::class.simpleName} \"${super.message}\""
+    override val message: String get() {
+        var msg : String = if(super.message.isNullOrEmpty()) this::class.simpleName!!
+            else "${this::class.simpleName} \"${super.message}\""
 
-            if(line!=-1) msg+= " line: $line"
-            if(index!=-1) msg+= " index: $index"
-            if(cause!=null) msg+= " cause: $cause.message"
+        if(line!=-1) msg+= " line: $line"
+        if(index!=-1) msg+= " index: $index"
+        if(cause!=null) msg+= " cause: ${super.cause!!.message}"
 
-            return msg
-        }
+        return msg
+    }
 
-    override fun toString() : String = localizedMessage
-}
-
-fun main() {
-    log(ParseException("hi", 5, 20).message)
-    log(ParseException("hi", 20))
+    override fun toString() : String = message
 }

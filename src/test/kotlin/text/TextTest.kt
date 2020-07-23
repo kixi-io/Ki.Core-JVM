@@ -1,6 +1,6 @@
 package ki.text
 
-import main.kotlin.ki.text.isKiIdentifier
+import ki.text.isKiIdentifier
 
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
