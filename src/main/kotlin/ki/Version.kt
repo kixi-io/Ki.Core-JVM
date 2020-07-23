@@ -86,11 +86,11 @@ data class Version (var major: Int, var minor: Int = 0, var micro: Int = 0, var 
             if(comps.size > 1) {
                 val minorText = comps[1];
                 if(minorText.startsWith("-")) {
-                    throw ParseException("'minor' component of Version cannot be negative.");
+                    throw ParseException("'minor' component of Version cannot be negative.")
                 } else if(minorText.countDigits() < minorText.length) {
-                    throw ParseException("Non-digit char in 'minor' component of Version.");
+                    throw ParseException("Non-digit char in 'minor' component of Version.")
                 } else if(minorText.isEmpty()) {
-                    throw ParseException("'minor' component of Version cannot be empty.");
+                    throw ParseException("'minor' component of Version cannot be empty.")
                 }
                 minor = Integer.parseInt(minorText)
             }
@@ -98,11 +98,11 @@ data class Version (var major: Int, var minor: Int = 0, var micro: Int = 0, var 
             if(comps.size > 2) {
                 val microText = comps[2];
                 if(microText.startsWith("-")) {
-                    throw ParseException("'micro' component of Version cannot be negative.");
+                    throw ParseException("'micro' component of Version cannot be negative.")
                 } else if(microText.countDigits() < microText.length) {
-                    throw ParseException("Non-digit char in 'micro' component of Version.");
+                    throw ParseException("Non-digit char in 'micro' component of Version.")
                 } else if(microText.isEmpty()) {
-                    throw ParseException("'micro' component of Version cannot be empty.");
+                    throw ParseException("'micro' component of Version cannot be empty.")
                 }
                 micro = Integer.parseInt(microText)
             }
@@ -110,7 +110,7 @@ data class Version (var major: Int, var minor: Int = 0, var micro: Int = 0, var 
             if(comps.size > 3) {
                 val qualifierText = comps[3];
                 if(qualifierText.isEmpty()) {
-                    throw ParseException("'qualifier' component of Version cannot be empty.");
+                    throw ParseException("'qualifier' component of Version cannot be empty.")
                 } else if(!qualifierText.isKiIdentifier()) {
                     throw ParseException("'qualifier' component is not a valid KiID.")
                 }
