@@ -12,7 +12,7 @@ import ki.text.isKiIdentifier
  *  3. Micro version: A positive integer
  *  4. Qualifier: A string such as "alpha" or "beta", allows alphanum, '_' and '-'
  *
- *  // TODO: Line this up with Maven Verions
+ *  // TODO: Line this up with Maven Versions
  */
 data class Version (var major: Int, var minor: Int = 0, var micro: Int = 0, var qualifier: String = "") :
     Comparable<Any?> {
