@@ -1,6 +1,13 @@
 package ki
 
-fun Collection<*>.toString(separator: String? = ", "): String? {
+/**
+ * Stringify a collection with the given separator. The default is ", ".
+ *
+ * @receiver Collection<*>
+ * @param separator String Defaults to ", "
+ * @return String
+ */
+fun Collection<*>.toString(separator: String = ", "): String {
     if(this.isEmpty()) return ""
     val buffer = StringBuffer()
     val i = this.iterator()
@@ -11,7 +18,14 @@ fun Collection<*>.toString(separator: String? = ", "): String? {
     return buffer.toString()
 }
 
-fun Array<*>.toString(separator: String? = ", "): String? {
+/**
+ * Stringify an array with the given separator. The default is ", ".
+ *
+ * @receiver Collection<*>
+ * @param separator String Defaults to ", "
+ * @return String
+ */
+fun Array<*>.toString(separator: String = ", "): String {
     if(this.isEmpty()) return ""
     val buffer = StringBuffer()
     val i = this.iterator()

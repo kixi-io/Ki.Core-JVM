@@ -5,9 +5,9 @@ package ki.text
  *
  * @property line Int The line on which the error occurred. If the text is a single line
  *     no line number is displayed.
- * @property index Int the index within the line. In the Ki libraries, index is the
- *      column within a line. Position is used to indicate the distinace from the
- *      beginning (across lines.)
+ * @property index Int The index within the line. In the Ki libraries, index is the
+ *      column within a line. Position is used to indicate the distance from the
+ *      beginning of the text (across lines.)
  * @property message String?
  */
 open class ParseException : RuntimeException {

@@ -1,5 +1,13 @@
 package ki
 
+/**
+ * Stringify a map with the given separator and assignment character.
+ *
+ * @receiver Map<*,*>
+ * @param separator CharSequence The separator for key/value pairs - default is ", "
+ * @param assignment CharSequence The character between the key and value - default is "="
+ * @return String?
+ */
 fun Map<*,*>.toString(separator: CharSequence = ", ", assignment: CharSequence = "="): String? {
     if(this.isEmpty()) return ""
     val buffer = StringBuffer()

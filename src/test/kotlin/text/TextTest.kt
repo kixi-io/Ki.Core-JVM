@@ -1,10 +1,14 @@
 package ki.text
 
-import ki.text.isKiIdentifier
-
-import org.junit.jupiter.api.Assertions.*
+import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 
+/**
+ * Tests for ki.text.Text+
+ *
+ * TODO: Exercise all functions in Text+
+ */
 class TextTest {
 
     @Test fun testKiIdentifiers() {

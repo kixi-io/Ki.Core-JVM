@@ -3,6 +3,9 @@ package ki
 import java.math.BigDecimal
 import java.time.format.DateTimeFormatter
 
+/**
+ * A set of convenience methods for working with Ki types and formatting.
+ */
 class Ki {
     companion object {
         /**

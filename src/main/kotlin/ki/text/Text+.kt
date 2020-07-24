@@ -2,7 +2,9 @@ package ki.text
 
 import java.util.*
 
-import ki.log
+/**
+ * A set of convenience methods for CharSequences
+ */
 
 fun CharSequence.toList(delimiters:String = " \t", trim:Boolean = true, list:MutableList<String> = ArrayList<String>()):
         List<String> {
