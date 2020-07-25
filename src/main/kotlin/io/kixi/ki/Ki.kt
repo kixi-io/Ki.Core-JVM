@@ -1,6 +1,9 @@
 package io.kixi.ki
 
 import java.math.BigDecimal
+import java.time.LocalDate
+import java.time.LocalDateTime
+import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
 
 /**
@@ -36,8 +39,7 @@ class Ki {
          */
         const val DATE_TIME_FORMAT = DATE_FORMAT + "@" + TIME_FORMAT
 
-        // TODO: Support all Ki types
-        // TODO: Utilize date/time formatters
+        // TODO: Durations (others?)
         @JvmStatic fun format(obj: Any?): String {
             return when (obj) {
                 null -> "nil"
@@ -45,6 +47,9 @@ class Ki {
                 is Char -> "'$obj'"
                 is BigDecimal -> "${obj}m"
                 is Float -> "${obj}f"
+                is LocalDate -> LOCAL_DATE_FORMATTER.format(obj)
+                is LocalDateTime -> LOCAL_DATE_TIME_FORMATTER.format(obj)
+                is ZonedDateTime -> ZONED_DATE_TIME_FORMATTER.format(obj)
                 else -> obj.toString()
             }
         }
