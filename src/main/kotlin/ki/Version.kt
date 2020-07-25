@@ -30,44 +30,29 @@ import java.lang.IllegalArgumentException
  *  9. 5.2-alpha-3
  *  10. 5.2.7-rc-5
  */
-class Version : Comparable<Any?> {
+class Version
+/**
+ *
+ * @param major Int
+ * @param minor Int
+ * @param micro Int
+ * @param qualifier String e.g. alpha, beta, RC
+ * @param qualifierNumber Int Only allowed when qualifier is specified
+ * @constructor
+ * @throws IllegalArgumentException If any numeric component is negative, or a
+ *    non-zero qualifierNumber is provided without a qualifier string
+ */(var major: Int, var minor: Int = 0, var micro: Int = 0, var qualifier: String = "", var qualifierNumber: Int = 0) : Comparable<Any?> {
 
-    var major = 0
-    var minor = 0
-    var micro = 0
-    var qualifier = ""
-    var qualifierNumber = 0
-
-    /**
-     *
-     * @param major Int
-     * @param minor Int
-     * @param micro Int
-     * @param qualifier String e.g. alpha, beta, RC
-     * @param qualifierNumber Int Only allowed when qualifier is specified
-     * @constructor
-     * @throws IllegalArgumentException If any numeric component is negative, or a
-     *    non-zero qualifierNumber is provided without a qualifier string
-     */
-    constructor(major: Int, minor: Int = 0, micro: Int = 0, qualifier: String = "",
-                qualifierNumber: Int = 0) {
-
+    init {
         if(major<0 || minor<0 || micro<0)
             throw IllegalArgumentException("Version components can't be negative.")
-
         if(qualifier.isEmpty() && qualifierNumber!=0) {
             throw IllegalArgumentException("Qualifier number is only allowed when "
                 + "a qualifier is provided.")
         }
-
-        this.major = major
-        this.minor = minor
-        this.micro = micro
-        this.qualifier = qualifier
-        this.qualifierNumber = qualifierNumber
     }
 
-    override fun equals(other: Any?): Boolean = if (other==null) false else toString().equals(other.toString())
+    override fun equals(other: Any?): Boolean = if (other==null) false else toString() == other.toString()
     override fun hashCode() : Int = toString().hashCode() or 31
 
     override fun toString(): String {
@@ -126,8 +111,8 @@ class Version : Comparable<Any?> {
     companion object {
         val EMPTY = Version(0)
 
-        val MIN = Version(0, 0, 0, "AAA")
-        val MAX = Version(Int.MAX_VALUE, Int.MAX_VALUE, Int.MAX_VALUE)
+        // val MIN = Version(0, 0, 0, "AAA")
+        // val MAX = Version(Int.MAX_VALUE, Int.MAX_VALUE, Int.MAX_VALUE)
 
         private var FORMAT_ERROR_STRING = "Use: major.minor.micro.qualifier. Only 'major' is required."
 
@@ -146,16 +131,16 @@ class Version : Comparable<Any?> {
             var minor = 0
             var micro = 0
 
-            var numberPortion = version
+            val numberPortion = version
             var qualifier = ""
             var qualifierNumber = 0
 
             var comps = numberPortion.split(delim)
 
-            if(comps.size == 0) {
-                throw ParseException("Invalid Version format. " + FORMAT_ERROR_STRING);
+            if(comps.isEmpty()) {
+                throw ParseException("Invalid Version format. $FORMAT_ERROR_STRING")
             } else if(comps.size > 3) {
-                throw ParseException("Too many components. " + FORMAT_ERROR_STRING);
+                throw ParseException("Too many components. $FORMAT_ERROR_STRING")
             }
 
             val lastSegment = comps.last()
@@ -172,7 +157,7 @@ class Version : Comparable<Any?> {
                 }
 
                 // Extract qualifierNumber
-                var firstQualNumIndex = qualifier.indexOfFirst { it.isDigit() }
+                val firstQualNumIndex = qualifier.indexOfFirst { it.isDigit() }
                 if(firstQualNumIndex!=-1) {
                     qualifierNumber = qualifier.substring(firstQualNumIndex).toInt()
                     qualifier = qualifier.substring(0, firstQualNumIndex).removeSuffix("-")
@@ -183,42 +168,47 @@ class Version : Comparable<Any?> {
                 comps[comps.size-1] = lastNumber
             }
 
-            val majorText = comps[0];
-            if(majorText.startsWith("-")) {
-                throw ParseException("'major' component of Version cannot be negative.");
-            } else if(majorText.countDigits() < majorText.length) {
-                throw ParseException("Non-digit char in 'major' component of Version.");
-            } else if(majorText.isEmpty()) {
-                throw ParseException("'major' component of Version cannot be empty.");
-            }
+            val majorText = comps[0]
 
-            major = Integer.parseInt(majorText)
+            when {
+                majorText.startsWith("-") -> throw ParseException(
+                    "'major' component of Version cannot be negative.")
+                majorText.countDigits() < majorText.length ->
+                    throw ParseException("Non-digit char in 'major' component of Version.")
+                majorText.isEmpty() ->
+                    throw ParseException("'major' component of Version cannot be empty.")
+                else -> {
+                    major = Integer.parseInt(majorText)
 
-            if(comps.size > 1) {
-                val minorText = comps[1];
-                if(minorText.startsWith("-")) {
-                    throw ParseException("'minor' component of Version cannot be negative.")
-                } else if(minorText.countDigits() < minorText.length) {
-                    throw ParseException("Non-digit char in 'minor' component of Version.")
-                } else if(minorText.isEmpty()) {
-                    throw ParseException("'minor' component of Version cannot be empty.")
+                    if (comps.size > 1) {
+                        val minorText = comps[1]
+                        minor = when {
+                            minorText.startsWith("-") -> throw
+                                ParseException("'minor' component of Version cannot be negative.")
+                            minorText.countDigits() < minorText.length -> throw
+                                ParseException("Non-digit char in 'minor' component of Version.")
+                            minorText.isEmpty() -> throw
+                                ParseException("'minor' component of Version cannot be empty.")
+                            else -> Integer.parseInt(minorText)
+                        }
+                    }
+
+                    if (comps.size > 2) {
+                        val microText = comps[2]
+                        when {
+                            microText.startsWith("-") -> throw
+                                ParseException("'micro' component of Version cannot be negative.")
+                            microText.countDigits() < microText.length -> throw
+                                ParseException("Non-digit char in 'micro' component of Version.")
+                            microText.isEmpty() -> throw
+                                ParseException("'micro' component of Version cannot be empty.")
+                            else -> micro = Integer.parseInt(microText)
+                        }
+                    }
+
+                    return Version(major, minor, micro, qualifier, qualifierNumber)
                 }
-                minor = Integer.parseInt(minorText)
             }
-
-            if(comps.size > 2) {
-                val microText = comps[2];
-                if(microText.startsWith("-")) {
-                    throw ParseException("'micro' component of Version cannot be negative.")
-                } else if(microText.countDigits() < microText.length) {
-                    throw ParseException("Non-digit char in 'micro' component of Version.")
-                } else if(microText.isEmpty()) {
-                    throw ParseException("'micro' component of Version cannot be empty.")
-                }
-                micro = Integer.parseInt(microText)
-            }
-
-            return Version(major, minor, micro, qualifier, qualifierNumber)
         }
     }
 }

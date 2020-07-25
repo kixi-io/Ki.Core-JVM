@@ -24,7 +24,7 @@ private fun out(prefix:String = "", vararg args:Any? /*, stream: PrintStream*/) 
     } else if(args.size == 1) {
         printMe += args[0].toString()
     } else {
-        printMe += args.toString(", ")!!
+        printMe += args.toString(", ")
     }
 
     // Hack until we can get System.err working properly
@@ -32,17 +32,5 @@ private fun out(prefix:String = "", vararg args:Any? /*, stream: PrintStream*/) 
 
     return printMe
 }
-
-fun main() {
-    log("hi")
-    log(1,2,3)
-
-    err("hi")
-    err(1,2,3)
-
-    warn("hi")
-    warn(1,2,3)
-}
-
 
 

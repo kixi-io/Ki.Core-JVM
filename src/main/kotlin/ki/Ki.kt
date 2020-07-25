@@ -36,7 +36,8 @@ class Ki {
          */
         const val DATE_TIME_FORMAT = DATE_FORMAT + "@" + TIME_FORMAT
 
-        // TODO support all Ki types
+        // TODO: Support all Ki types
+        // TODO: Utilize date/time formatters
         @JvmStatic fun format(obj: Any?): String {
             return when (obj) {
                 null -> "nil"
