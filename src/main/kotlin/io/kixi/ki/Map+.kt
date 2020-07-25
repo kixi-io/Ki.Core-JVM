@@ -1,4 +1,4 @@
-package ki
+package io.kixi.ki
 
 /**
  * Stringify a map with the given separator and assignment character.

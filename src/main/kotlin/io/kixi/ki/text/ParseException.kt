@@ -1,4 +1,4 @@
-package ki.text
+package io.kixi.ki.text
 
 /**
  * A ParseException represents an problem encountered while parsing text.
@@ -25,6 +25,7 @@ open class ParseException : RuntimeException {
      * @param cause Throwable?
      * @constructor
      */
+    @JvmOverloads
     constructor(message:String, line:Int = -1, index:Int = -1, cause:Throwable? = null) : super(message, cause) {
         this.line = line
         this.index = index

@@ -1,4 +1,4 @@
-package ki
+package io.kixi.ki
 
 import java.math.BigDecimal
 import java.time.format.DateTimeFormatter

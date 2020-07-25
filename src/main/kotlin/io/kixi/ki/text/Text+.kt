@@ -1,4 +1,4 @@
-package ki.text
+package io.kixi.ki.text
 
 import java.util.*
 

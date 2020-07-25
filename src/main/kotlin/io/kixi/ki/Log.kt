@@ -1,6 +1,4 @@
-package ki
-
-import java.io.PrintStream
+package io.kixi.ki
 
 /**
  * Ki standard logging. In the future, this will provide options for writing to the

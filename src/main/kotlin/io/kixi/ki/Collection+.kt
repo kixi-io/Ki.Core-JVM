@@ -1,4 +1,4 @@
-package ki
+package io.kixi.ki
 
 /**
  * Stringify a collection with the given separator. The default is ", ".

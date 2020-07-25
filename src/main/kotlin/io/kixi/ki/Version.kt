@@ -1,8 +1,7 @@
-package ki
+package io.kixi.ki
 
-import ki.text.ParseException
-import ki.text.countDigits
-import ki.text.isKiIdentifier
+import io.kixi.ki.text.ParseException
+import io.kixi.ki.text.countDigits
 import java.lang.IllegalArgumentException
 
 /**
@@ -15,7 +14,7 @@ import java.lang.IllegalArgumentException
  *  1. Major version: A positive integer
  *  2. Minor version: A positive integer
  *  3. Micro version: A positive integer
- *  4. Qualifier: A string of letters such as "alpha" or "beta"
+ *  4. Qualifier: A string of letters such as "alpha", "beta" or RC
  *  5. QualifierNumber: A positive integer (requires a qualifier)
  *
  *  **Examples**
@@ -29,19 +28,12 @@ import java.lang.IllegalArgumentException
  *  8. 5-beta1 # same as above (dash is optional)
  *  9. 5.2-alpha-3
  *  10. 5.2.7-rc-5
- */
-class Version
-/**
  *
- * @param major Int
- * @param minor Int
- * @param micro Int
- * @param qualifier String e.g. alpha, beta, RC
- * @param qualifierNumber Int Only allowed when qualifier is specified
- * @constructor
- * @throws IllegalArgumentException If any numeric component is negative, or a
+ *  @throws IllegalArgumentException If any numeric component is negative, or a
  *    non-zero qualifierNumber is provided without a qualifier string
- */(var major: Int, var minor: Int = 0, var micro: Int = 0, var qualifier: String = "", var qualifierNumber: Int = 0) : Comparable<Any?> {
+ */
+class Version (var major: Int, var minor: Int = 0, var micro: Int = 0, var qualifier: String = "",
+               var qualifierNumber: Int = 0) : Comparable<Any?> {
 
     init {
         if(major<0 || minor<0 || micro<0)
@@ -111,8 +103,8 @@ class Version
     companion object {
         val EMPTY = Version(0)
 
-        // val MIN = Version(0, 0, 0, "AAA")
-        // val MAX = Version(Int.MAX_VALUE, Int.MAX_VALUE, Int.MAX_VALUE)
+        val MIN = Version(0, 0, 0, "AAA")
+        val MAX = Version(Int.MAX_VALUE, Int.MAX_VALUE, Int.MAX_VALUE)
 
         private var FORMAT_ERROR_STRING = "Use: major.minor.micro.qualifier. Only 'major' is required."
 
@@ -172,7 +164,8 @@ class Version
 
             when {
                 majorText.startsWith("-") -> throw ParseException(
-                    "'major' component of Version cannot be negative.")
+                    "'major' component of Version cannot be negative."
+                )
                 majorText.countDigits() < majorText.length ->
                     throw ParseException("Non-digit char in 'major' component of Version.")
                 majorText.isEmpty() ->
@@ -184,11 +177,11 @@ class Version
                         val minorText = comps[1]
                         minor = when {
                             minorText.startsWith("-") -> throw
-                                ParseException("'minor' component of Version cannot be negative.")
+                            ParseException("'minor' component of Version cannot be negative.")
                             minorText.countDigits() < minorText.length -> throw
-                                ParseException("Non-digit char in 'minor' component of Version.")
+                            ParseException("Non-digit char in 'minor' component of Version.")
                             minorText.isEmpty() -> throw
-                                ParseException("'minor' component of Version cannot be empty.")
+                            ParseException("'minor' component of Version cannot be empty.")
                             else -> Integer.parseInt(minorText)
                         }
                     }
@@ -197,11 +190,11 @@ class Version
                         val microText = comps[2]
                         when {
                             microText.startsWith("-") -> throw
-                                ParseException("'micro' component of Version cannot be negative.")
+                            ParseException("'micro' component of Version cannot be negative.")
                             microText.countDigits() < microText.length -> throw
-                                ParseException("Non-digit char in 'micro' component of Version.")
+                            ParseException("Non-digit char in 'micro' component of Version.")
                             microText.isEmpty() -> throw
-                                ParseException("'micro' component of Version cannot be empty.")
+                            ParseException("'micro' component of Version cannot be empty.")
                             else -> micro = Integer.parseInt(microText)
                         }
                     }

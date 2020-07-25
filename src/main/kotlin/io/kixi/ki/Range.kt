@@ -1,4 +1,4 @@
-package ki
+package io.kixi.ki
 
 /**
  * A Ki Range can be inclusive or exclusive on both ends, may be reversed (e.g. 5..1),

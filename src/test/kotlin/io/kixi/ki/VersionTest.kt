@@ -1,6 +1,6 @@
-package ki
+package io.kixi.ki
 
-import ki.text.ParseException
+import io.kixi.ki.text.ParseException
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -13,11 +13,14 @@ class VersionTest {
         assertEquals(Version.parse("05.02.03").toString(), "5.2.3")
         assertEquals(Version.parse("5.2").toString(), "5.2.0")
         assertEquals(Version.parse("5").toString(), "5.0.0")
-        assertEquals(Version.parse("5.2.3-alpha").toString(),
+        assertEquals(
+            Version.parse("5.2.3-alpha").toString(),
             "5.2.3-alpha")
-        assertEquals(Version.parse("5.2.3-alpha-5").toString(),
+        assertEquals(
+            Version.parse("5.2.3-alpha-5").toString(),
             "5.2.3-alpha-5")
-        assertEquals(Version.parse("5.2.3-alpha5").toString(),
+        assertEquals(
+            Version.parse("5.2.3-alpha5").toString(),
             "5.2.3-alpha-5")
     }
 
