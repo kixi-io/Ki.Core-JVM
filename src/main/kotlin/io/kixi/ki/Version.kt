@@ -110,7 +110,7 @@ class Version (var major: Int, var minor: Int = 0, var micro: Int = 0, var quali
 
         /**
          * Create a version from a string with the format:
-         *      major('.'minor('.'micro('-'qualifier)?)?)?
+         *      major('.'minor('.'micro)?)?('-'qualifier((-)?qualifierNumber)?)?
          *
          * All number components must be positive and the qualifier chars must be
          * alphanum, '_' or '-'.
