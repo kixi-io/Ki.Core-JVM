@@ -289,7 +289,6 @@ class Ki {
 
 // TODO - Convert to tests
 fun main() {
-
     // LocalDate
 
     var date = LocalDate.of(2020,5,2)
@@ -329,71 +328,5 @@ fun main() {
     // Should be same as above
     log(Ki.formatZonedDateTime(zonedDateTime2, zeroPad = true, forceNano = true), " = 2020/05/02@8:05:00.023000000-05:30")
     log("--- --- ---")
-
-    /*
-    val localDateTime = "2019/07/16@13:29:15"
-    var timestamp = LocalDateTime.parse(localDateTime,
-        Ki.LOCAL_DATE_TIME_FORMATTER)
-    System.out.println(localDateTime.format(timestamp))
-
-    val localDateTimeWithFractSecs = "2019/7/16@13:29:15.1112223"
-    timestamp = LocalDateTime.parse(localDateTimeWithFractSecs,
-        Ki.LOCAL_DATE_TIME_FORMATTER)
-    System.out.println(localDateTimeWithFractSecs.format(timestamp))
-
-    // ZonedDateTime
-
-    var zonedDateTime = "2019/07/16@13:29:15.1112-UTC"
-    var zonedTimestamp = Ki.parseZonedDateTime(zonedDateTime)
-    System.out.println(Ki.formatZonedDateTime(zonedTimestamp))
-
-    zonedDateTime = "2019/07/16@13:29:15.1112-GMT"
-    zonedTimestamp = Ki.parseZonedDateTime(zonedDateTime)
-    System.out.println(Ki.formatZonedDateTime(zonedTimestamp))
-
-    zonedDateTime = "2019/07/16@13:29:15.1112-Z"
-    zonedTimestamp = Ki.parseZonedDateTime(zonedDateTime)
-    System.out.println(Ki.formatZonedDateTime(zonedTimestamp))
-
-    zonedDateTime = "2019/07/16@13:29:15.1112+3"
-    zonedTimestamp = Ki.parseZonedDateTime(zonedDateTime)
-    System.out.println(Ki.formatZonedDateTime(zonedTimestamp))
-
-    zonedDateTime = "2019/07/16@13:29:15.1112-3"
-    zonedTimestamp = Ki.parseZonedDateTime(zonedDateTime)
-    System.out.println(Ki.formatZonedDateTime(zonedTimestamp))
-
-    zonedDateTime = "2019/07/16@13:29:15.1112+04"
-    zonedTimestamp = Ki.parseZonedDateTime(zonedDateTime)
-    System.out.println(Ki.formatZonedDateTime(zonedTimestamp))
-
-    zonedDateTime = "2019/07/16@13:29:15.1112-5:30"
-    zonedTimestamp = Ki.parseZonedDateTime(zonedDateTime)
-    System.out.println(Ki.formatZonedDateTime(zonedTimestamp))
-
-    zonedDateTime = "2019/07/16@13:29:15.1112+11"
-    zonedTimestamp = Ki.parseZonedDateTime(zonedDateTime)
-    System.out.println(Ki.formatZonedDateTime(zonedTimestamp))
-
-    zonedDateTime = "2019/07/6@09:00-1"
-    zonedTimestamp = Ki.parseZonedDateTime(zonedDateTime)
-    System.out.println(Ki.formatZonedDateTime(zonedTimestamp))
-
-    zonedDateTime = "2019/07/16@9:30-JP/JST"
-    zonedTimestamp = Ki.parseZonedDateTime(zonedDateTime)
-    System.out.println(Ki.formatZonedDateTime(zonedTimestamp))
-
-    zonedDateTime = "2019/07/16@9:23:00.23-JP/JST"
-    zonedTimestamp = Ki.parseZonedDateTime(zonedDateTime)
-    System.out.println(Ki.formatZonedDateTime(zonedTimestamp))
-
-    zonedDateTime = "2019/07/16@10:05:24.525-IN/IST"
-    zonedTimestamp = Ki.parseZonedDateTime(zonedDateTime)
-    System.out.println(Ki.formatZonedDateTime(zonedTimestamp))
-
-    zonedDateTime = "2019/07/16@10:05:24.525_563_643-IN/IST"
-    zonedTimestamp = Ki.parseZonedDateTime(zonedDateTime)
-    System.out.println(Ki.formatZonedDateTime(zonedTimestamp))
-    */
 }
 
