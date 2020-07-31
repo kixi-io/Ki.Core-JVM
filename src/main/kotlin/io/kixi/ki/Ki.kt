@@ -2,14 +2,13 @@ package io.kixi.ki
 
 import io.kixi.ki.text.ParseException
 import java.math.BigDecimal
-import java.time.LocalDate
-import java.time.LocalDateTime
-import java.time.ZoneOffset
-import java.time.ZonedDateTime
+import java.time.*
 import java.time.format.DateTimeFormatter
 import java.time.format.DateTimeFormatterBuilder
 import java.time.format.ResolverStyle
 import java.time.temporal.ChronoField.*
+import java.time.temporal.TemporalAccessor
+import java.time.temporal.TemporalField
 
 /**
  * A set of convenience methods for working with Ki types, parsing and formatting.
@@ -20,26 +19,56 @@ import java.time.temporal.ChronoField.*
 class Ki {
     companion object {
 
-        /**
-         * The Ki local time format H:mm:s.S
-         * The Ki zoned time format is H:mm:s.S-z
-         *
-         * "z" is a zone, which may be:
-         * 1. Z (Zulu time = UTC+00:00)
-         * 2. UTC or GMT (same as above)
-         * 3. An offset from Z such as +4 or -2:30
-         * 4. A KiTZ (See https://github.com/kixi-io/Ki.Docs/wiki/Ki-Time-Zone-Specification)
-         *
-         * Note: Ki time uses a 24 hour clock (0-23)
-         *
-         * Note: This is not the same as a duration. This format is used
-         * for the time component of a date_time instance
-         */
-        // val TIME_FORMATTER = DateTimeFormatter.ofPattern("H:mm:s.S-z")
-
-        @JvmField val LOCAL_DATE_FORMATTER = DateTimeFormatter.ofPattern("y/M/d")
+        @JvmField val LOCAL_DATE = DateTimeFormatter.ofPattern("y/M/d")
+        @JvmField val LOCAL_DATE_ZERO_PAD = DateTimeFormatter.ofPattern("yyyy/MM/dd")
 
         //-----------------------------------------------------------------------
+
+        // Time Formatters & Parsers ////
+
+        @JvmField val LOCAL_TIME  = DateTimeFormatterBuilder()
+            .appendValue(HOUR_OF_DAY)
+            .appendLiteral(':')
+            .appendValue(MINUTE_OF_HOUR, 2)
+            // .optionalStart()
+            .appendLiteral(':')
+            .appendValue(SECOND_OF_MINUTE, 2)
+            .optionalStart()
+            .appendFraction(NANO_OF_SECOND, 0, 9, true)
+            .toFormatter().withResolverStyle(ResolverStyle.LENIENT)
+
+        @JvmField val LOCAL_TIME_PARSER  = DateTimeFormatterBuilder()
+            .appendValue(HOUR_OF_DAY)
+            .appendLiteral(':')
+            .appendValue(MINUTE_OF_HOUR, 2)
+            .optionalStart()
+            .appendLiteral(':')
+            .appendValue(SECOND_OF_MINUTE, 2)
+            .optionalStart()
+            .appendFraction(NANO_OF_SECOND, 0, 9, true)
+            .toFormatter().withResolverStyle(ResolverStyle.LENIENT)
+
+        @JvmField val LOCAL_TIME_ZERO_PAD  = DateTimeFormatterBuilder()
+            .appendValue(HOUR_OF_DAY, 2)
+            .appendLiteral(':')
+            .appendValue(MINUTE_OF_HOUR, 2)
+            // .optionalStart()
+            .appendLiteral(':')
+            .appendValue(SECOND_OF_MINUTE, 2)
+            .optionalStart()
+            .appendFraction(NANO_OF_SECOND, 9, 9, true)
+            .toFormatter().withResolverStyle(ResolverStyle.LENIENT)
+
+        @JvmField val LOCAL_TIME_ZERO_PAD_FORCE_NANO  = DateTimeFormatterBuilder()
+            .appendValue(HOUR_OF_DAY, 2)
+            .appendLiteral(':')
+            .appendValue(MINUTE_OF_HOUR, 2)
+            .appendLiteral(':')
+            .appendValue(SECOND_OF_MINUTE, 2)
+            .appendFraction(NANO_OF_SECOND, 9, 9, true)
+            .toFormatter().withResolverStyle(ResolverStyle.LENIENT)
+
+        /*
         @JvmField val LOCAL_TIME  = DateTimeFormatterBuilder()
                 .appendValue(HOUR_OF_DAY)
                 .appendLiteral(':')
@@ -51,16 +80,38 @@ class Ki {
                 .appendFraction(NANO_OF_SECOND, 0, 9, true)
                 .toFormatter().withResolverStyle(ResolverStyle.LENIENT)
 
+        @JvmField val LOCAL_TIME_NO_SECONDS  = DateTimeFormatterBuilder()
+            .appendValue(HOUR_OF_DAY)
+            .appendLiteral(':')
+            .appendValue(MINUTE_OF_HOUR, 2)
+            .toFormatter().withResolverStyle(ResolverStyle.LENIENT)
+        */
 
-        @JvmField val LOCAL_DATE_TIME_FORMATTER = DateTimeFormatterBuilder()
-            .append(LOCAL_DATE_FORMATTER)
+        // LocalDateTime Formatters & Parsers ////
+
+        @JvmField val LOCAL_DATE_TIME = DateTimeFormatterBuilder()
+            .append(LOCAL_DATE)
             .appendLiteral('@')
             .append(LOCAL_TIME) // DateTimeFormatter.ofPattern("H:mm:s.S"))
             .toFormatter() // TIME_FORMATTER) // DateTimeFormatter.ISO_LOCAL_TIME)
 
-        @JvmField val ZONED_DATE_TIME_OFFSET_FORMATTER = DateTimeFormatterBuilder()
-            .append(LOCAL_DATE_TIME_FORMATTER)
-            // .appendPattern("'-'")
+        @JvmField val LOCAL_DATE_TIME_PARSER = DateTimeFormatterBuilder()
+            .append(LOCAL_DATE)
+            .appendLiteral('@')
+            .append(LOCAL_TIME_PARSER)
+            .toFormatter()
+
+        // ZonedDateTime Formatters & Parsers ////
+
+        @JvmField val ZONED_DATE_TIME_OFFSET = DateTimeFormatterBuilder()
+            .append(LOCAL_DATE_TIME)
+            // .appendLiteral("'-'")
+            .appendOffsetId()
+            .toFormatter()
+
+        @JvmField val ZONED_DATE_TIME_OFFSET_PARSER = DateTimeFormatterBuilder()
+            .append(LOCAL_DATE_TIME_PARSER)
+            // .appendLiteral("'-'")
             .appendOffsetId()
             .toFormatter()
 
@@ -79,15 +130,21 @@ class Ki {
                 is Char -> "'$obj'"
                 is BigDecimal -> "${obj}m"
                 is Float -> "${obj}f"
-                is LocalDate -> LOCAL_DATE_FORMATTER.format(obj)
-                is LocalDateTime -> LOCAL_DATE_TIME_FORMATTER.format(obj)
-                is ZonedDateTime -> Ki.formatZonedDateTime(obj)
+                is LocalDate -> formatLocalDate(obj)
+                is LocalDateTime -> formatLocalDateTime(obj)
+                is ZonedDateTime -> formatZonedDateTime(obj)
                 else -> obj.toString()
             }
         }
 
+        // Parsing DateTime ////
+
+        @JvmStatic fun parseLocalDate(ldText:String) : LocalDate {
+            return LocalDate.parse(ldText, LOCAL_DATE)
+        }
+
         @JvmStatic fun parseLocalDateTime(ldtText:String) : LocalDateTime {
-            return LocalDateTime.parse(ldtText.replace("_", ""), LOCAL_DATE_TIME_FORMATTER)
+            return LocalDateTime.parse(ldtText.replace("_", ""), LOCAL_DATE_TIME_PARSER)
         }
 
         @JvmStatic fun parseZonedDateTime(zdtText:String) : ZonedDateTime {
@@ -108,7 +165,7 @@ class Ki {
                     val offset = zdtText.substring(plusIdx)
 
                     return ZonedDateTime.parse(localDT + normalizeOffset(offset),
-                        ZONED_DATE_TIME_OFFSET_FORMATTER)
+                        ZONED_DATE_TIME_OFFSET_PARSER)
                 }
             }
 
@@ -118,10 +175,10 @@ class Ki {
             // check for negative offset
             if(tz.length>1 && tz[1].isDigit()) {
                 return ZonedDateTime.parse(localDT + normalizeOffset(tz),
-                    ZONED_DATE_TIME_OFFSET_FORMATTER)
+                    ZONED_DATE_TIME_OFFSET)
             // check for Z time (UTC)
             } else if (tz=="-UTC" || tz=="-GMT" || tz=="-Z") {
-                return ZonedDateTime.of(LocalDateTime.parse(localDT, LOCAL_DATE_TIME_FORMATTER),
+                return ZonedDateTime.of(LocalDateTime.parse(localDT, LOCAL_DATE_TIME),
                     ZoneOffset.UTC)
             // check for KiTZ (Ki Time Zone Spec https://github.com/kixi-io/Ki.Docs/wiki/Ki-Time-Zone-Specification)
             } else {
@@ -130,8 +187,82 @@ class Ki {
                     throw ParseException("Unsupported KiTZ ID: ${tz.substring(1)}")
                 }
 
-                return ZonedDateTime.of(LocalDateTime.parse(localDT, LOCAL_DATE_TIME_FORMATTER), offset)
+                return ZonedDateTime.of(LocalDateTime.parse(localDT, LOCAL_DATE_TIME), offset)
             }
+        }
+
+        // Formatting DateTime ////
+
+        /**
+         * Format a LocalDateTime using Ki standard formatting: `y/M/d` or `yyyy/MM/dd` if
+         * `zeroPad=true`.
+         *
+         * @param zeroPad Boolean Prefixes all displayed components with zero pads e.g.
+         * 2021/05/08
+         */
+        @JvmStatic @JvmOverloads
+        fun formatLocalDate(localDate: LocalDate, zeroPad:Boolean = false) : String {
+            return if (zeroPad) LOCAL_DATE_ZERO_PAD.format(localDate)
+                else LOCAL_DATE.format(localDate)
+        }
+
+        /**
+         * Format a LocalDateTime using Ki standard formatting. Hours, minutes and seconds
+         * are always displayed. hours are optionally zero padded to two digits. Nanos
+         * (shown as fractional seconds) are only displayed when present
+         * unless forceNano=true. If nanos are displayed and zeroPad = true they are
+         * padded as 9 digit fractional seconds.
+         *
+         *     **zeroPad=false, forceNano=false (default)**
+         *         y/M/d@H:mm:ss(.S)? # Fractional seconds displayed only if non-zero
+         *         Example: `2020/5/2@8:05:00`, `2020/5/2@8:05:00.001`
+         *
+         *     **zeroPad=true, forceNano=false**
+         *         y/M/d@HH:mm:ss(.S)? # Fractional seconds displayed only if non-zero
+         *         Example: `2020/05/02@08:31:00`, `2020/05/02@08:31:00.001000000`
+         *
+         *     **zeroPad=true, forceNano=true**
+         *         y/M/d@HH:mm:ss(.n)? # Fractional seconds always shown, 9 digits
+         *         Example: `2020/05/02@08:31:00.000000000`, `2020/05/02@08:31:00.001000000`
+         *
+         *
+         * @param zeroPad Boolean Prefixes all displayed components with zero pads e.g. 2021/05/08@08:05:00
+         * @param forceNano Boolean Forces nanos to be displayed even if they are 0 (9 zeros of padding)
+         */
+        @JvmStatic @JvmOverloads
+        fun formatLocalDateTime(localDateTime: LocalDateTime, zeroPad:Boolean = false,
+                                forceNano:Boolean = false) : String {
+
+            var dateText = formatLocalDate(localDateTime.toLocalDate(), zeroPad)
+
+            var timeText = ""
+
+            if(!zeroPad && !forceNano) {
+                timeText = LOCAL_TIME.format(localDateTime)
+            } else if(zeroPad && !forceNano) {
+                timeText = LOCAL_TIME_ZERO_PAD.format(localDateTime)
+                if(localDateTime.nano == 0) timeText = timeText.removeSuffix(".000000000")
+            } else if(zeroPad && forceNano) {
+                timeText = LOCAL_TIME_ZERO_PAD_FORCE_NANO.format(localDateTime)
+            }
+
+            return dateText + "@" + timeText;
+        }
+
+        @JvmStatic @JvmOverloads
+        fun formatZonedDateTime(zonedDateTime:ZonedDateTime, zeroPad:Boolean = false,
+                                forceNano:Boolean = false) : String {
+
+            val buf = StringBuffer()
+            buf.append(formatLocalDateTime(zonedDateTime.toLocalDateTime(), zeroPad, forceNano))
+
+            var zone = zonedDateTime.zone.toString().replace("GMT", "UTF")
+            if(zone == "Z")
+                zone = "-Z"
+            buf.append(zone)
+
+            // remove second component of time zone offset if :00
+            return buf.toString().removeSuffix(":00")
         }
 
         private fun normalizeOffset(offset:String) : String {
@@ -153,24 +284,53 @@ class Ki {
 
             return offset
         }
-
-        // TODO - Remove leading zero in offsets
-        @JvmStatic fun formatZonedDateTime(zonedDateTime:ZonedDateTime) : String {
-            val buf = StringBuffer()
-            buf.append(LOCAL_DATE_TIME_FORMATTER.format(zonedDateTime))
-
-            var zone = zonedDateTime.zone.toString().replace("GMT", "UTF")
-            if(zone == "Z")
-                zone = "-Z"
-            buf.append(zone)
-
-            return buf.toString().removeSuffix(":00")
-        }
     }
 }
 
 // TODO - Convert to tests
 fun main() {
+
+    // LocalDate
+
+    var date = LocalDate.of(2020,5,2)
+
+    log(Ki.formatLocalDate(date), " = 2020/5/2")
+    log(Ki.formatLocalDate(date,true), " = 2020/05/02")
+    log("--- --- ---")
+
+    // LocalDateTime
+
+    var localDateTime1 = Ki.parseLocalDateTime("2020/05/02@8:05")
+    var localDateTime2 = Ki.parseLocalDateTime("2020/5/2@8:05:00.023")
+
+    log(Ki.formatLocalDateTime(localDateTime1), " = 2020/5/2@8:05:00")
+    log(Ki.formatLocalDateTime(localDateTime1, zeroPad = true), " = 2020/05/02@08:05:00")
+    log(Ki.formatLocalDateTime(localDateTime1, zeroPad = true, forceNano = true),
+        " = 2020/05/02@08:05:00.000000000")
+    log()
+    log(Ki.formatLocalDateTime(localDateTime2), " = 2020/5/2@8:05:00.023")
+    log(Ki.formatLocalDateTime(localDateTime2, zeroPad = true), " = 2020/05/02@8:05:00.023000000")
+    // Should be same as above
+    log(Ki.formatLocalDateTime(localDateTime2, zeroPad = true, forceNano = true), " = 2020/05/02@8:05:00.023000000")
+    log("--- --- ---")
+
+    // ZonedDateTime
+
+    var zonedDateTime1 = Ki.parseZonedDateTime("2020/05/02@8:05+2")
+    var zonedDateTime2 = Ki.parseZonedDateTime("2020/5/2@8:05:00.023-5:30")
+
+    log(Ki.formatZonedDateTime(zonedDateTime1), " = 2020/5/2@8:05+02")
+    log(Ki.formatZonedDateTime(zonedDateTime1, zeroPad = true), " = 2020/05/02@08:05+02")
+    log(Ki.formatZonedDateTime(zonedDateTime1, zeroPad = true, forceNano = true),
+        " = 2020/05/02@08:05:00.000000000+02")
+    log()
+    log(Ki.formatZonedDateTime(zonedDateTime2), " = 2020/5/2@8:05:00.023-05:30")
+    log(Ki.formatZonedDateTime(zonedDateTime2, zeroPad = true), " = 2020/05/02@8:05:00.023000000-05:30")
+    // Should be same as above
+    log(Ki.formatZonedDateTime(zonedDateTime2, zeroPad = true, forceNano = true), " = 2020/05/02@8:05:00.023000000-05:30")
+    log("--- --- ---")
+
+    /*
     val localDateTime = "2019/07/16@13:29:15"
     var timestamp = LocalDateTime.parse(localDateTime,
         Ki.LOCAL_DATE_TIME_FORMATTER)
@@ -223,6 +383,10 @@ fun main() {
     zonedTimestamp = Ki.parseZonedDateTime(zonedDateTime)
     System.out.println(Ki.formatZonedDateTime(zonedTimestamp))
 
+    zonedDateTime = "2019/07/16@9:23:00.23-JP/JST"
+    zonedTimestamp = Ki.parseZonedDateTime(zonedDateTime)
+    System.out.println(Ki.formatZonedDateTime(zonedTimestamp))
+
     zonedDateTime = "2019/07/16@10:05:24.525-IN/IST"
     zonedTimestamp = Ki.parseZonedDateTime(zonedDateTime)
     System.out.println(Ki.formatZonedDateTime(zonedTimestamp))
@@ -230,5 +394,6 @@ fun main() {
     zonedDateTime = "2019/07/16@10:05:24.525_563_643-IN/IST"
     zonedTimestamp = Ki.parseZonedDateTime(zonedDateTime)
     System.out.println(Ki.formatZonedDateTime(zonedTimestamp))
+    */
 }
 
