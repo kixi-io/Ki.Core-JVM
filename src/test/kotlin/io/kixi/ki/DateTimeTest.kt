@@ -54,8 +54,11 @@ class DateTimeTest {
         var zonedDateTime2 = Ki.parseZonedDateTime("2021/08/05@09:05:06.001_000_000+2")
         var zonedDateTime3 = Ki.parseZonedDateTime("2021/8/05@09:05:18.23-4:30")
         var zonedDateTime4 = Ki.parseZonedDateTime("2021/8/05@09:05:00.23-IN/IST")
+        var zonedDateTime5 = Ki.parseZonedDateTime("2020/8/10@9:02-Z")
+
         assertEquals(zonedDateTime1, zonedDateTime2)
         assertEquals(18, zonedDateTime3.second)
         assertEquals("+05:30", zonedDateTime4.zone.toString())
+        assertEquals("2020/8/10@9:02:00-Z", Ki.formatZonedDateTime(zonedDateTime5))
     }
 }

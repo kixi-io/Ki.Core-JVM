@@ -7,8 +7,6 @@ import java.time.format.DateTimeFormatter
 import java.time.format.DateTimeFormatterBuilder
 import java.time.format.ResolverStyle
 import java.time.temporal.ChronoField.*
-import java.time.temporal.TemporalAccessor
-import java.time.temporal.TemporalField
 
 /**
  * A set of convenience methods for working with Ki types, parsing and formatting.
@@ -122,7 +120,7 @@ class Ki {
          */
         // const val DATE_TIME_FORMAT = DATE_FORMAT + "@" + TIME_FORMAT
 
-        // TODO: Durations (others?)
+        // TODO: Bin64
         @JvmStatic fun format(obj: Any?): String {
             return when (obj) {
                 null -> "nil"
@@ -133,6 +131,7 @@ class Ki {
                 is LocalDate -> formatLocalDate(obj)
                 is LocalDateTime -> formatLocalDateTime(obj)
                 is ZonedDateTime -> formatZonedDateTime(obj)
+                is Duration -> formatDuration(obj)
                 else -> obj.toString()
             }
         }
@@ -175,10 +174,10 @@ class Ki {
             // check for negative offset
             if(tz.length>1 && tz[1].isDigit()) {
                 return ZonedDateTime.parse(localDT + normalizeOffset(tz),
-                    ZONED_DATE_TIME_OFFSET)
+                    ZONED_DATE_TIME_OFFSET_PARSER)
             // check for Z time (UTC)
             } else if (tz=="-UTC" || tz=="-GMT" || tz=="-Z") {
-                return ZonedDateTime.of(LocalDateTime.parse(localDT, LOCAL_DATE_TIME),
+                return ZonedDateTime.of(LocalDateTime.parse(localDT, LOCAL_DATE_TIME_PARSER),
                     ZoneOffset.UTC)
             // check for KiTZ (Ki Time Zone Spec https://github.com/kixi-io/Ki.Docs/wiki/Ki-Time-Zone-Specification)
             } else {
@@ -187,7 +186,7 @@ class Ki {
                     throw ParseException("Unsupported KiTZ ID: ${tz.substring(1)}")
                 }
 
-                return ZonedDateTime.of(LocalDateTime.parse(localDT, LOCAL_DATE_TIME), offset)
+                return ZonedDateTime.of(LocalDateTime.parse(localDT, LOCAL_DATE_TIME_PARSER), offset)
             }
         }
 
@@ -284,11 +283,52 @@ class Ki {
 
             return offset
         }
+
+        // Parsing Duration ////
+
+        fun parseDuration(text: String): Duration {
+            // TODO - Finish day and fractional seconds for compound durations and add single
+            // unit Durations.
+
+            var parts = text.split(':')
+            return Duration.ofHours(parts[0].toLong())
+                .plus(Duration.ofMinutes(parts[1].toLong()))
+                .plus(Duration.ofSeconds(parts[2].toLong()))
+        }
+
+        // Formatting Duration ////
+
+        @JvmStatic @JvmOverloads
+        fun formatDuration(duration: Duration, zeroPad:Boolean = false): String {
+            val seconds = duration.seconds
+            val absSeconds = Math.abs(seconds)
+            val positive = String.format(
+                "%d:%02d:%02d",
+                absSeconds / 3600,
+                absSeconds % 3600 / 60,
+                absSeconds % 60
+            )
+            return if (seconds < 0) "-$positive" else positive
+        }
     }
 }
 
 // TODO - Convert to tests
 fun main() {
+
+    // Duration
+    log("-- Durations ----")
+
+    var dur1 = Ki.parseDuration("1:30:00")
+    var dur2 = Ki.parseDuration("0:15:00")
+    var dur3 = Ki.parseDuration("10:23:53")
+
+    log(Ki.formatDuration(dur1))
+    log(Ki.formatDuration(dur2))
+    log(Ki.formatDuration(dur3))
+
+    log("-- DateTimes ----")
+
     // LocalDate
 
     var date = LocalDate.of(2020,5,2)
