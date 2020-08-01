@@ -1,6 +1,7 @@
 package io.kixi.ki
 
 import io.kixi.ki.text.ParseException
+import java.lang.Math.abs
 import java.math.BigDecimal
 import java.time.*
 import java.time.format.DateTimeFormatter
@@ -286,20 +287,112 @@ class Ki {
 
         // Parsing Duration ////
 
+        // TODO: Support fractional seconds and single units.
+        // TODO: Update docs to remove optional labels other than day in compound
+        //       durations.
         fun parseDuration(text: String): Duration {
-            // TODO - Finish day and fractional seconds for compound durations and add single
-            // unit Durations.
-
             var parts = text.split(':')
-            return Duration.ofHours(parts[0].toLong())
-                .plus(Duration.ofMinutes(parts[1].toLong()))
-                .plus(Duration.ofSeconds(parts[2].toLong()))
+
+            var day =""
+
+            if(parts.size==4) {
+                // is compound with day
+                var dayIndex = parts[0].indexOf("day")
+                if(dayIndex==-1)
+                    throw ParseException("Compound duration with day component must be " +
+                        "suffixed with \"day\" or \"days\".")
+                return Duration.ofDays(parts[0].substring(0, dayIndex).toLong())
+                    .plus(Duration.ofHours(parts[1].toLong()))
+                    .plus(Duration.ofMinutes(parts[2].toLong()))
+                    .plus(Duration.ofSeconds(parts[3].toLong()))
+            } else if(parts.size==3) {
+                // is compound without day
+                return Duration.ofHours(parts[0].toLong())
+                    .plus(Duration.ofMinutes(parts[1].toLong()))
+                    .plus(Duration.ofSeconds(parts[2].toLong()))
+            } else if(parts.size==1) {
+                // TODO: Fractional units for single unit durations.
+                return when {
+                    text.endsWith("day") -> {
+                        return Duration.ofDays(text.removeSuffix("day").toLong())
+                    }
+                    text.endsWith("days") -> {
+                        return Duration.ofDays(text.removeSuffix("days").toLong())
+                    }
+                    text.endsWith("h") -> {
+                        return Duration.ofHours(text.removeSuffix("h").toLong())
+                    }
+                    text.endsWith("min") -> {
+                        return Duration.ofMinutes(text.removeSuffix("min").toLong())
+                    }
+                    text.endsWith("s") -> {
+                        return Duration.ofSeconds(text.removeSuffix("s").toLong())
+                    }
+                    text.endsWith("ms") -> {
+                        return Duration.ofMillis(text.removeSuffix("ms").toLong())
+                    }
+                    text.endsWith("ns") -> {
+                        return Duration.ofNanos(text.removeSuffix("ns").toLong())
+                    }
+                    else -> throw ParseException("Unkown temporal unit in duration.")
+                }
+            }
+
+            throw ParseException("""
+                Can't parse Duration \"$text\": Wrong number of segments. Durations must
+                be single unit (e.g. 5h) or compound with days:hours:minutes:seconds. Days
+                are option and must be suffixed with "day" or "days"
+                (e.g. 2days:05:30:00).
+            """.trimIndent())
         }
 
         // Formatting Duration ////
 
         @JvmStatic @JvmOverloads
         fun formatDuration(duration: Duration, zeroPad:Boolean = false): String {
+
+            // TODO: Implement zeroPad option
+
+            var sign = if (duration.seconds < 0) "-" else ""
+
+            var days = abs(duration.toDaysPart())
+            var hrs = abs(duration.toHoursPart())
+            var mins = abs(duration.toMinutesPart())
+            var secs = abs(duration.toSecondsPart())
+
+            fun allEq0(vararg args:Number) : Boolean {
+                for(num in args) {
+                    if (num.toString() != "0")
+                        return false
+                }
+                return true
+            }
+
+            if(days!=0L) {
+                if(allEq0(hrs,mins, secs))
+                    return "$sign${days}${if(days==1L) "day" else "days"}"
+
+                return "$sign${days}${if(days==1L) "day" else "days"}:$hrs:$mins:$secs"
+            } else if(hrs!=0) {
+                if(allEq0(days,mins, secs))
+                    return "$sign${hrs}h"
+
+                return "$sign$hrs:$mins:$secs"
+            } else if(mins!=0) {
+                if(allEq0(days,hrs, secs))
+                    return "$sign${mins}min"
+
+                return "$sign$hrs:$mins:$secs"
+            } else if(secs!=0) {
+                if(allEq0(days,hrs, mins))
+                    return "$sign${secs}s"
+
+                return "$sign$hrs:$mins:$secs"
+            }
+
+            return "0:0:0"
+
+            /*
             val seconds = duration.seconds
             val absSeconds = Math.abs(seconds)
             val positive = String.format(
@@ -309,6 +402,7 @@ class Ki {
                 absSeconds % 60
             )
             return if (seconds < 0) "-$positive" else positive
+            */
         }
     }
 }
@@ -319,6 +413,8 @@ fun main() {
     // Duration
     log("-- Durations ----")
 
+    log("-- compound")
+
     var dur1 = Ki.parseDuration("1:30:00")
     var dur2 = Ki.parseDuration("0:15:00")
     var dur3 = Ki.parseDuration("10:23:53")
@@ -326,6 +422,28 @@ fun main() {
     log(Ki.formatDuration(dur1))
     log(Ki.formatDuration(dur2))
     log(Ki.formatDuration(dur3))
+
+    log("-- compound with days")
+
+    var dur4 = Ki.parseDuration("1day:1:30:00")
+    var dur5 = Ki.parseDuration("5days:2:15:3")
+
+    log(Ki.formatDuration(dur4))
+    log(Ki.formatDuration(dur5))
+
+    log("-- single unit")
+
+    var dur6 = Ki.parseDuration("1day")
+    var dur7 = Ki.parseDuration("3days")
+    var dur8 = Ki.parseDuration("5h")
+    var dur9 = Ki.parseDuration("12min")
+    var dur10 = Ki.parseDuration("23s")
+
+    log(Ki.formatDuration(dur6))
+    log(Ki.formatDuration(dur7))
+    log(Ki.formatDuration(dur8))
+    log(Ki.formatDuration(dur9))
+    log(Ki.formatDuration(dur10))
 
     log("-- DateTimes ----")
 
