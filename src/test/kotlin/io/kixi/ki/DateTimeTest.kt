@@ -1,9 +1,7 @@
 package io.kixi.ki
 
-import org.junit.jupiter.api.Assertions.*
-
-import org.junit.jupiter.api.Test;
-import java.time.LocalDate
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Test
 import java.time.format.DateTimeFormatter
 
 class DateTimeTest {
