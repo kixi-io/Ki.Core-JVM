@@ -257,7 +257,7 @@ class Ki {
             forceNano: Boolean = false
         ): String {
 
-            var dateText = formatLocalDate(localDateTime.toLocalDate(), zeroPad)
+            val dateText = formatLocalDate(localDateTime.toLocalDate(), zeroPad)
 
             var timeText = ""
 
@@ -270,7 +270,7 @@ class Ki {
                 timeText = LOCAL_TIME_ZERO_PAD_FORCE_NANO.format(localDateTime)
             }
 
-            return dateText + "@" + timeText;
+            return "$dateText@$timeText";
         }
 
         @JvmStatic
@@ -314,17 +314,20 @@ class Ki {
 
         // Parsing Duration ////
 
-        // TODO: Support fractional seconds and single units.
-        // TODO: Update docs to remove optional labels other than day in compound
-        //       durations.
-        fun parseDuration(text: String): Duration {
-            var parts = text.split(':')
+        // TODO: Fix treatment of negative durations (works in formatting but not parsing)
 
-            var day = ""
+        /**
+         * Parses an individual unit duration (1day, 3days, 23h, 3s, 5ms, 12ns) or a
+         * compound duration such as `12:53:21` for 12 hours, 53 mins and 21 secs, or
+         * `5days:08:23:08.321` for 5 days, 8 hours, 23 mins, 8.321 secs (zero pads
+         * are optional).
+         */
+        fun parseDuration(text: String): Duration {
+            val parts = text.split(':')
 
             if (parts.size == 4) {
                 // is compound with day
-                var dayIndex = parts[0].indexOf("day")
+                val dayIndex = parts[0].indexOf("day")
                 if (dayIndex == -1)
                     throw ParseException(
                         "Compound duration with day component must be " +
@@ -333,12 +336,13 @@ class Ki {
                 return Duration.ofDays(parts[0].substring(0, dayIndex).toLong())
                     .plus(Duration.ofHours(parts[1].toLong()))
                     .plus(Duration.ofMinutes(parts[2].toLong()))
-                    .plus(Duration.ofSeconds(parts[3].toLong()))
+                    .plus(Duration.ofNanos(secStringToNanos(parts[3])))
             } else if (parts.size == 3) {
                 // is compound without day
                 return Duration.ofHours(parts[0].toLong())
                     .plus(Duration.ofMinutes(parts[1].toLong()))
-                    .plus(Duration.ofSeconds(parts[2].toLong()))
+                    .plus(Duration.ofNanos(secStringToNanos(parts[2])))
+                    //.plus(Duration.ofSeconds(parts[2].toLong()))
             } else if (parts.size == 1) {
                 // TODO: Fractional units for single unit durations.
                 return when {
@@ -378,8 +382,34 @@ class Ki {
             )
         }
 
+        val NANO_ZEROS = "000000000"
+
+        private fun secStringToNanos(s: String): Long {
+
+            var dotIndex = s.indexOf('.')
+            if(dotIndex==-1)
+                return s.toLong() * 1_000_000_000L
+
+            var nanos = s.substring(0,dotIndex).toLong() * 1_000_000_000L
+
+            var nanoText = s.substring(dotIndex+1)
+            var zeroPadding = NANO_ZEROS.substring(0, NANO_ZEROS.length - nanoText.length)
+
+            nanos+= (nanoText + zeroPadding).toLong()
+
+            return nanos
+        }
+
         // Formatting Duration ////
 
+
+        /**
+         * Format a Duration as a single unit (e.g. 5days, 6h, 7min, 8s, 12ms, 2ns) or
+         * compound format such as 1day:15:23:42.532 The day(s) component is optional
+         * in compound durations.
+         *
+         * @param zeroPad Boolean If true zero padding is added for hours, mins and secs.
+         */
         @JvmStatic
         @JvmOverloads
         fun formatDuration(duration: Duration, zeroPad: Boolean = false): String {
@@ -429,25 +459,35 @@ class Ki {
                 if (all0(hrs, mins, secs) && fractionalSec.isEmpty())
                     return "$sign${days}${if (days == 1L) "day" else "days"}"
 
-                return "$sign${days}${if (days == 1L) "day" else "days"}:$hrs:$mins:$secs${fractionalSec}"
+                return if (zeroPad) "$sign${days}${if (days == 1L) "day" else "days"}:" +
+                          "${padL2(hrs)}:${padL2(mins)}:${padL2(secs)}${fractionalSec}"
+                    else "$sign${days}${if (days == 1L) "day" else "days"}:$hrs:$mins:$secs${fractionalSec}"
             } else if (hrs != 0) {
                 if (all0(days, mins, secs)  && fractionalSec.isEmpty())
                     return "$sign${hrs}h"
 
-                return "$sign$hrs:$mins:$secs${fractionalSec}"
+                // return "$sign$hrs:$mins:$secs${fractionalSec}"
+                return if (zeroPad) "$sign${padL2(hrs)}:${padL2(mins)}:${padL2(secs)}${fractionalSec}"
+                        else "$sign$hrs:$mins:$secs${fractionalSec}"
             } else if (mins != 0) {
                 if (all0(days, hrs, secs) && fractionalSec.isEmpty())
                     return "$sign${mins}min"
 
-                return "$sign$hrs:$mins:$secs${fractionalSec}"
+                return if (zeroPad) "$sign${padL2(hrs)}:${padL2(mins)}:${padL2(secs)}${fractionalSec}"
+                    else "$sign$hrs:$mins:$secs${fractionalSec}"
             } else if (secs != 0 && fractionalSec.isEmpty()) {
                 if (all0(days, hrs, mins))
                     return "$sign${secs}s"
 
-                return "$sign$hrs:$mins:$secs${fractionalSec}"
+                return if (zeroPad) "$sign${padL2(hrs)}:${padL2(mins)}:${padL2(secs)}${fractionalSec}"
+                    else "$sign$hrs:$mins:$secs${fractionalSec}"
             }
 
             return "0:0:0"
+        }
+
+        private fun padL2(num:Any) : String {
+            return String.format("%02d", num)
         }
 
         private fun trimTrailing0s(numText:String) : String {
@@ -476,30 +516,6 @@ class Ki {
             }
             return true
         }
-
-        /**
-         * @param duration Duration
-         * @param zeroPad Boolean If true string will have 0 prefix padding as appropriate for the unit
-         * @return String The unit string or null if its not a single unit duration
-         */
-        /*
-        private fun checkSingleUnitDuration(duration: Duration, zeroPad: Boolean = false): String {
-            var nanos = duration.toNanos()
-
-            // Check for ns only
-            if (nanos < 1_000_000) {
-                return "${nanos}ns"
-
-            // Check for ms only
-            } else if (nanos < 1_000_000_000) {
-                return "${nanos / 1_000_000}ms"
-
-            // We have a duration of a second or longer
-            } else {
-
-            }
-        }
-        */
     }
 }
 
@@ -514,8 +530,10 @@ fun main() {
     var dur1 = Ki.parseDuration("1:30:00")
     var dur2 = Ki.parseDuration("0:15:00")
     var dur3 = Ki.parseDuration("10:23:53")
-    var dur4 = dur3.plus(Duration.ofMillis(123))
-    var dur5 = dur3.plus(Duration.ofNanos(123456789))
+    var dur4 = Ki.parseDuration("10:23:53.123") // dur3.plus(Duration.ofMillis(123))
+    var dur5 = Ki.parseDuration("10:23:53.123456789") // dur3.plus(Duration.ofNanos(123456789))
+    var dur6 = Ki.parseDuration("2:3:4")
+    var dur7 = Ki.parseDuration("1day:2:3:4.5")
 
     log(dur1.kiFormat())
     log(dur2.kiFormat())
@@ -523,12 +541,21 @@ fun main() {
     log(dur4.kiFormat())
     log(dur5.kiFormat())
 
+    log()
+    log("No padding")
+    log(dur6.kiFormat())
+    log(dur7.kiFormat())
+    log()
+    log("With padding")
+    log(dur6.kiFormat(zeroPad = true))
+    log(dur7.kiFormat(zeroPad = true))
+
     log("-- compound with days")
 
     dur1 = Ki.parseDuration("1day:1:30:00")
     dur2 = Ki.parseDuration("5days:2:15:3")
-    dur3 = dur2.plus(Duration.ofMillis(23))
-    dur4 = dur2.plus(Duration.ofNanos(456789))
+    dur3 = Ki.parseDuration("5days:2:15:3.023") // dur2.plus(Duration.ofMillis(23))
+    dur4 = Ki.parseDuration("5days:2:15:3.000456789") // dur2.plus(Duration.ofNanos(456789))
 
     log(Ki.formatDuration(dur1))
     log(Ki.formatDuration(dur2))
@@ -543,12 +570,12 @@ fun main() {
     dur4 = Ki.parseDuration("12min")
     dur5 = Ki.parseDuration("23s")
 
-    var dur6 = Duration.ofMillis(25)
-    var dur7 = Duration.ofNanos(52)
+    dur6 = Duration.ofMillis(25)
+    dur7 = Duration.ofNanos(52)
 
-    var dur8 = dur5.plus(dur6)
-    var dur9 = dur5.plus(dur7)
-    var dur10 = dur5.plus(dur6).plus(dur7)
+    val dur8 = dur5.plus(dur6)
+    val dur9 = dur5.plus(dur7)
+    val dur10 = dur5.plus(dur6).plus(dur7)
 
     log(Ki.formatDuration(dur1))
     log(Ki.formatDuration(dur2))
