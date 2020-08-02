@@ -41,7 +41,7 @@ class DurationTest {
             Duration.ofSeconds(9),
             Ki.parseDuration("9s")
         )
-        assertEquals("7s", Ki.formatDuration(dur))
+        assertEquals("9s", Ki.formatDuration(dur))
 
         dur = Duration.ofMillis(10)
         assertEquals(
