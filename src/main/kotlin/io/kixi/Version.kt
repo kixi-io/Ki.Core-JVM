@@ -1,7 +1,7 @@
-package io.kixi.ki
+package io.kixi
 
-import io.kixi.ki.text.ParseException
-import io.kixi.ki.text.countDigits
+import io.kixi.text.ParseException
+import io.kixi.text.countDigits
 import java.lang.IllegalArgumentException
 
 /**

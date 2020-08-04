@@ -1,6 +1,5 @@
-package io.kixi.ki.text
+package io.kixi.text
 
-import io.kixi.ki.text.isKiIdentifier
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test

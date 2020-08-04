@@ -1,6 +1,6 @@
-package io.kixi.ki
+package io.kixi
 
-import io.kixi.ki.text.ParseException
+import io.kixi.text.ParseException
 import java.lang.Math.abs
 import java.math.BigDecimal
 import java.time.*
@@ -113,12 +113,22 @@ class Ki {
                 is Char -> "'$obj'"
                 is BigDecimal -> "${obj}m"
                 is Float -> "${obj}f"
+                is Map<*,*> -> formatMap(obj)
+                is Collection<*> -> formatCollection(obj)
                 is LocalDate -> formatLocalDate(obj)
                 is LocalDateTime -> formatLocalDateTime(obj)
                 is ZonedDateTime -> formatZonedDateTime(obj)
                 is Duration -> formatDuration(obj)
                 else -> obj.toString()
             }
+        }
+
+        private fun formatMap(map: Map<*,*>): String {
+            return "[${map.toString(", ", formatter={ obj -> format(obj) })}]"
+        }
+
+        private fun formatCollection(col: Collection<*>): String {
+            return "[${col.toString(formatter={ obj -> format(obj) })}]"
         }
 
         // Parsing DateTime ////
@@ -130,7 +140,9 @@ class Ki {
 
         @JvmStatic
         fun parseLocalDateTime(ldtText: String): LocalDateTime {
-            return LocalDateTime.parse(ldtText.replace("_", ""), LOCAL_DATE_TIME_PARSER)
+            return LocalDateTime.parse(ldtText.replace("_", ""),
+                LOCAL_DATE_TIME_PARSER
+            )
         }
 
         @JvmStatic
@@ -178,7 +190,9 @@ class Ki {
                 val offset = KiTZ.offsets[tz.substring(1)] ?:
                     throw ParseException("Unsupported KiTZ ID: ${tz.substring(1)}")
 
-                return ZonedDateTime.of(LocalDateTime.parse(localDT, LOCAL_DATE_TIME_PARSER), offset)
+                return ZonedDateTime.of(LocalDateTime.parse(localDT,
+                    LOCAL_DATE_TIME_PARSER
+                ), offset)
             }
         }
 
@@ -252,7 +266,13 @@ class Ki {
         ): String {
 
             val buf = StringBuilder()
-            buf.append(formatLocalDateTime(zonedDateTime.toLocalDateTime(), zeroPad, forceNano))
+            buf.append(
+                formatLocalDateTime(
+                    zonedDateTime.toLocalDateTime(),
+                    zeroPad,
+                    forceNano
+                )
+            )
 
             var zone = zonedDateTime.zone.toString().replace("GMT", "UTF")
             if (zone == "Z")
@@ -347,7 +367,10 @@ class Ki {
                     text.endsWith("s") -> {
                         // Deal with fractional seconds
                         var secText = text.removeSuffix("s")
-                        return  if(sign=="-") Duration.ofNanos(-secStringToNanos(secText))
+                        return  if(sign=="-") Duration.ofNanos(-secStringToNanos(
+                            secText
+                        )
+                        )
                                 else Duration.ofNanos(secStringToNanos(secText))
                     }
                     else -> throw ParseException("Unkown temporal unit in duration.")
@@ -444,26 +467,34 @@ class Ki {
                     return "$sign${days}${if (days == 1L) "day" else "days"}"
 
                 return if (zeroPad) "$sign${days}${if (days == 1L) "day" else "days"}:" +
-                          "${padL2(hrs)}:${padL2(mins)}:${padL2(secs)}${fractionalSec}"
+                          "${padL2(hrs)}:${padL2(
+                              mins
+                          )}:${padL2(secs)}${fractionalSec}"
                     else "$sign${days}${if (days == 1L) "day" else "days"}:$hrs:$mins:$secs${fractionalSec}"
             } else if (hrs != 0) {
-                if (all0(days, mins, secs)  && fractionalSec.isEmpty())
+                if (all0(days, mins, secs) && fractionalSec.isEmpty())
                     return "$sign${hrs}h"
 
                 // return "$sign$hrs:$mins:$secs${fractionalSec}"
-                return if (zeroPad) "$sign${padL2(hrs)}:${padL2(mins)}:${padL2(secs)}${fractionalSec}"
+                return if (zeroPad) "$sign${padL2(hrs)}:${padL2(
+                    mins
+                )}:${padL2(secs)}${fractionalSec}"
                         else "$sign$hrs:$mins:$secs${fractionalSec}"
             } else if (mins != 0) {
                 if (all0(days, hrs, secs) && fractionalSec.isEmpty())
                     return "$sign${mins}min"
 
-                return if (zeroPad) "$sign${padL2(hrs)}:${padL2(mins)}:${padL2(secs)}${fractionalSec}"
+                return if (zeroPad) "$sign${padL2(hrs)}:${padL2(
+                    mins
+                )}:${padL2(secs)}${fractionalSec}"
                     else "$sign$hrs:$mins:$secs${fractionalSec}"
             } else if (secs != 0 && fractionalSec.isEmpty()) {
                 if (all0(days, hrs, mins))
                     return "$sign${secs}s"
 
-                return if (zeroPad) "$sign${padL2(hrs)}:${padL2(mins)}:${padL2(secs)}${fractionalSec}"
+                return if (zeroPad) "$sign${padL2(hrs)}:${padL2(
+                    mins
+                )}:${padL2(secs)}${fractionalSec}"
                     else "$sign$hrs:$mins:$secs${fractionalSec}"
             }
 
@@ -503,3 +534,17 @@ class Ki {
     }
 }
 
+fun main() {
+    log(Ki.format(
+        listOf(
+            Ki.parseDuration("2s"),
+            listOf(Ki.parseDuration("3s"), Ki.parseDuration("4s"))
+        )
+    ))
+    log(Ki.format(
+        mapOf(
+            Pair("time", Ki.parseDuration("2s")),
+            Pair("date", Ki.parseLocalDate("1970/5/25"))
+        )
+    ))
+}

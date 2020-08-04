@@ -1,6 +1,6 @@
-package io.kixi.ki
+package io.kixi
 
-import io.kixi.ki.text.ParseException
+import io.kixi.text.ParseException
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue

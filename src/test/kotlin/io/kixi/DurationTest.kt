@@ -1,7 +1,7 @@
-package io.kixi.ki
+package io.kixi
 
-import io.kixi.ki.Ki.Companion.formatDuration as format
-import io.kixi.ki.Ki.Companion.parseDuration as parse
+import io.kixi.Ki.Companion.formatDuration as format
+import io.kixi.Ki.Companion.parseDuration as parse
 
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test

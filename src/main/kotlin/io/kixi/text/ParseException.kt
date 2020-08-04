@@ -1,4 +1,4 @@
-package io.kixi.ki.text
+package io.kixi.text
 
 /**
  * A ParseException represents an problem encountered while parsing text.

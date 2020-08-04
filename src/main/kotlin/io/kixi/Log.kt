@@ -1,4 +1,4 @@
-package io.kixi.ki
+package io.kixi
 
 /**
  * Ki standard logging. In the future, this will provide options for writing to the

@@ -1,4 +1,4 @@
-package io.kixi.ki
+package io.kixi
 
 import java.time.ZoneOffset
 
