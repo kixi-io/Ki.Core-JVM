@@ -8,6 +8,7 @@ import java.time.format.DateTimeFormatter
 import java.time.format.DateTimeFormatterBuilder
 import java.time.format.ResolverStyle
 import java.time.temporal.ChronoField.*
+import java.util.*
 
 /**
  * A set of convenience methods for working with Ki types, parsing and formatting.
@@ -119,8 +120,13 @@ class Ki {
                 is LocalDateTime -> formatLocalDateTime(obj)
                 is ZonedDateTime -> formatZonedDateTime(obj)
                 is Duration -> formatDuration(obj)
+                is ByteArray -> formatBase64(obj)
                 else -> obj.toString()
             }
+        }
+
+        private fun formatBase64(obj: ByteArray): String {
+            return ".base64(${Base64.getEncoder().encodeToString(obj)})"
         }
 
         private fun formatMap(map: Map<*,*>): String {
@@ -532,19 +538,4 @@ class Ki {
             return true
         }
     }
-}
-
-fun main() {
-    log(Ki.format(
-        listOf(
-            Ki.parseDuration("2s"),
-            listOf(Ki.parseDuration("3s"), Ki.parseDuration("4s"))
-        )
-    ))
-    log(Ki.format(
-        mapOf(
-            Pair("time", Ki.parseDuration("2s")),
-            Pair("date", Ki.parseLocalDate("1970/5/25"))
-        )
-    ))
 }
