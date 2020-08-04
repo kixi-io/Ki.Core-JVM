@@ -11,9 +11,6 @@ import java.time.temporal.ChronoField.*
 
 /**
  * A set of convenience methods for working with Ki types, parsing and formatting.
- *
- * TODO: DateTime types need different formatters for formatting and parsing. The
- * formatting should be strict, but the parsing should be lenient.
  */
 class Ki {
     companion object {
@@ -22,10 +19,6 @@ class Ki {
         val LOCAL_DATE = DateTimeFormatter.ofPattern("y/M/d")
         @JvmField
         val LOCAL_DATE_ZERO_PAD = DateTimeFormatter.ofPattern("yyyy/MM/dd")
-
-        //-----------------------------------------------------------------------
-
-        // Time Formatters & Parsers ////
 
         @JvmField
         val LOCAL_TIME = DateTimeFormatterBuilder()
@@ -73,33 +66,14 @@ class Ki {
             .appendFraction(NANO_OF_SECOND, 9, 9, true)
             .toFormatter().withResolverStyle(ResolverStyle.LENIENT)
 
-        /*
-        @JvmField val LOCAL_TIME  = DateTimeFormatterBuilder()
-                .appendValue(HOUR_OF_DAY)
-                .appendLiteral(':')
-                .appendValue(MINUTE_OF_HOUR, 2)
-                .optionalStart()
-                .appendLiteral(':')
-                .appendValue(SECOND_OF_MINUTE, 2)
-                .optionalStart()
-                .appendFraction(NANO_OF_SECOND, 0, 9, true)
-                .toFormatter().withResolverStyle(ResolverStyle.LENIENT)
-
-        @JvmField val LOCAL_TIME_NO_SECONDS  = DateTimeFormatterBuilder()
-            .appendValue(HOUR_OF_DAY)
-            .appendLiteral(':')
-            .appendValue(MINUTE_OF_HOUR, 2)
-            .toFormatter().withResolverStyle(ResolverStyle.LENIENT)
-        */
-
         // LocalDateTime Formatters & Parsers ////
 
         @JvmField
         val LOCAL_DATE_TIME = DateTimeFormatterBuilder()
             .append(LOCAL_DATE)
             .appendLiteral('@')
-            .append(LOCAL_TIME) // DateTimeFormatter.ofPattern("H:mm:s.S"))
-            .toFormatter() // TIME_FORMATTER) // DateTimeFormatter.ISO_LOCAL_TIME)
+            .append(LOCAL_TIME) // DateTimeFormatter.ofPattern("H:mm:ss.S"))
+            .toFormatter()
 
         @JvmField
         val LOCAL_DATE_TIME_PARSER = DateTimeFormatterBuilder()
@@ -125,11 +99,10 @@ class Ki {
             .toFormatter()
 
         /**
-         * The Ki standard DATE_TIME format yyyy/MM/dd-HH:mm:ss.nnnnnnnnnVV
+         * The Ki standard DATE_TIME format y/M/d-H:mm:ss.S(offset|-KiTZ|-Z)
          *
          * Note: Ki uses a 24 hour clock (0-23)
          */
-        // const val DATE_TIME_FORMAT = DATE_FORMAT + "@" + TIME_FORMAT
 
         // TODO: Bin64
         @JvmStatic
@@ -415,7 +388,6 @@ class Ki {
 
         // Formatting Duration ////
 
-
         /**
          * Format a Duration as a single unit (e.g. 5days, 6h, 7min, 8s, 12ms, 2ns) or
          * compound format such as 1day:15:23:42.532 The day(s) component is optional
@@ -427,18 +399,22 @@ class Ki {
         @JvmOverloads
         fun formatDuration(duration: Duration, zeroPad: Boolean = false): String {
 
-            // TODO: Implement zeroPad option
-
             var totalNanos = duration.toNanos()
-
             val sign = if (totalNanos < 0L) "-" else ""
+            totalNanos = abs(totalNanos)
 
-            totalNanos = abs(duration.toNanos())
             val nanosOfSec = totalNanos % 1_000_000_000L
 
-            var fractionalSec = if(nanosOfSec==0L)
-                ""
+            var fractionalSec = if(nanosOfSec==0L) ""
             else "." + trimTrailing0s(String.format("%09d", nanosOfSec))
+
+            // This is required due to a bug in java.time.Duration that incorrectly
+            // subtracts 1 from negative durations seconds that have nanosecond
+            // components.
+            var secs = abs(duration.toSecondsPart())
+            if(sign=="-" && nanosOfSec>0) {
+                secs--
+            }
 
             // Single unit Durations: day(s), h, m, s, ms, ns
 
@@ -452,19 +428,16 @@ class Ki {
 
             // Check for seconds (including fractional) single unit
             } else if (totalNanos < 60_000_000_000L) {
-                val secs = abs(duration.toSecondsPart())
+                val secs = abs(secs)
                 return "${sign}${secs}${fractionalSec}s"
             }
-
-            // Compound Durations (day:)h/min/s.S ////
 
             val days = abs(duration.toDaysPart())
             val hrs = abs(duration.toHoursPart())
             val mins = abs(duration.toMinutesPart())
-            val secs = abs(duration.toSecondsPart())
 
-            // val millis = abs(duration.toMillisPart())
-            // val nanos = abs(duration.toNanosPart())
+
+            // Compound Durations (day:)h/min/s.S ////
 
             if (days != 0L) {
                 if (all0(hrs, mins, secs) && fractionalSec.isEmpty())
@@ -528,75 +501,5 @@ class Ki {
             return true
         }
     }
-}
-
-// TODO - Convert to tests
-fun main() {
-
-    // Duration
-    log("-- Durations ----")
-
-    log("-- compound")
-
-    var dur1 = Ki.parseDuration("1:30:00")
-    var dur2 = Ki.parseDuration("0:15:00")
-    var dur3 = Ki.parseDuration("10:23:53")
-    var dur4 = Ki.parseDuration("10:23:53.123") // dur3.plus(Duration.ofMillis(123))
-    var dur5 = Ki.parseDuration("10:23:53.123_456_789") // dur3.plus(Duration.ofNanos(123456789))
-    var dur6 = Ki.parseDuration("2:3:4")
-    var dur7 = Ki.parseDuration("1day:2:3:4.5")
-
-    log(dur1.kiFormat())
-    log(dur2.kiFormat())
-    log(dur3.kiFormat())
-    log(dur4.kiFormat())
-    log(dur5.kiFormat())
-
-    log()
-    log("No padding")
-    log(dur6.kiFormat())
-    log(dur7.kiFormat())
-    log()
-    log("With padding")
-    log(dur6.kiFormat(zeroPad = true))
-    log(dur7.kiFormat(zeroPad = true))
-
-    log("-- compound with days")
-
-    dur1 = Ki.parseDuration("1day:1:30:00")
-    dur2 = Ki.parseDuration("5days:2:15:3")
-    dur3 = Ki.parseDuration("5days:2:15:3.023") // dur2.plus(Duration.ofMillis(23))
-    dur4 = Ki.parseDuration("5days:2:15:3.000456789") // dur2.plus(Duration.ofNanos(456789))
-
-    log(Ki.formatDuration(dur1))
-    log(Ki.formatDuration(dur2))
-    log(Ki.formatDuration(dur3))
-    log(Ki.formatDuration(dur4))
-
-    log("-- single unit")
-
-    dur1 = Ki.parseDuration("1day")
-    dur2 = Ki.parseDuration("3days")
-    dur3 = Ki.parseDuration("5h")
-    dur4 = Ki.parseDuration("12min")
-    dur5 = Ki.parseDuration("23s")
-
-    dur6 = Duration.ofMillis(25)
-    dur7 = Duration.ofNanos(52)
-
-    val dur8 = dur5.plus(dur6)
-    val dur9 = dur5.plus(dur7)
-    val dur10 = dur5.plus(dur6).plus(dur7)
-
-    log(Ki.formatDuration(dur1))
-    log(Ki.formatDuration(dur2))
-    log(Ki.formatDuration(dur3))
-    log(Ki.formatDuration(dur4))
-    log(Ki.formatDuration(dur5))
-    log(Ki.formatDuration(dur6))
-    log(Ki.formatDuration(dur7))
-    log(Ki.formatDuration(dur8))
-    log(Ki.formatDuration(dur9))
-    log(Ki.formatDuration(dur10))
 }
 

@@ -3,7 +3,7 @@ package io.kixi.ki
 import java.time.ZoneOffset
 
 /**
- * A Ki time zone. See
+ * A Ki time zone (KiTZ). See
  * <a href="https://github.com/kixi-io/Ki.Docs/wiki/Ki-Time-Zone-Specification">Ki Time Zone Specification</a>
  */
 class KiTZ {

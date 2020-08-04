@@ -43,6 +43,7 @@ class DurationTest {
         assertEquals("11ns", format(dur))
     }
 
+
     @Test fun testDurationCompound() {
         var durHMS = Duration.ofHours(5).plusMinutes(6).plusSeconds(7)
         assertEquals("5:6:7", format(durHMS))
@@ -64,7 +65,7 @@ class DurationTest {
         assertEquals("5days:04:03:02", format(durDHMS, zeroPad = true))
     }
 
-    @Test fun testEqualsForVaryingFormat() {
+    @Test fun testEqualsForVaryingFormats() {
         assertEquals(parse("5h"), parse("5:0:0"))
         assertEquals(parse("48h"), parse("2days"))
         assertEquals(parse("53:04:03.111000"), parse("2days:5:4:3.111"))
@@ -84,6 +85,29 @@ class DurationTest {
     }
 
     @Test fun testNegativeDurationFormatting() {
-        // TODO
+        // Individual Unit
+        assertEquals("-1day", format(Duration.ofDays(-1)))
+        assertEquals("-2days", format(Duration.ofDays(-2)))
+        assertEquals("-3h", format(Duration.ofHours(-3)))
+        assertEquals("-4min", format(Duration.ofMinutes(-4)))
+        assertEquals("-5s", format(Duration.ofSeconds(-5)))
+        assertEquals("-5.123456789s",format(Duration.ofSeconds(-5).
+            plusNanos(-123456789)))
+        assertEquals("-6ms", format(Duration.ofMillis(-6)))
+        assertEquals("-7ns", format(Duration.ofNanos(-7)))
+
+        // Compound
+        assertEquals("-1day:2:3:4", format(compound(-1,-2,-3, -4)))
+        assertEquals("-1:2:3", format(compound(-1,-2, -3)))
+        assertEquals("-1:2:3.234", format(compound(-1,-2, -3)
+            .plusMillis(-234)))
+        assertEquals("-1:2:3.000000234", format(compound(-1,-2, -3)
+            .plusNanos(-234)))
     }
+
+    private fun compound(h:Long, min:Long, s:Long): Duration =
+        Duration.ofHours(h).plusMinutes(min).plusSeconds(s)
+
+    private fun compound(days: Long, h:Long, min:Long, s:Long): Duration =
+        Duration.ofDays(days).plusHours(h).plusMinutes(min).plusSeconds(s)
 }
