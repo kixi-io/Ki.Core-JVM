@@ -428,7 +428,7 @@ class Ki {
 
             // Check for seconds (including fractional) single unit
             } else if (totalNanos < 60_000_000_000L) {
-                val secs = abs(secs)
+                // val secs = abs(secs)
                 return "${sign}${secs}${fractionalSec}s"
             }
 
