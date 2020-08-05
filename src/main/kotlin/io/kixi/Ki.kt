@@ -105,7 +105,6 @@ class Ki {
          * Note: Ki uses a 24 hour clock (0-23)
          */
 
-        // TODO: Bin64
         @JvmStatic
         fun format(obj: Any?): String {
             return when (obj) {
@@ -125,8 +124,46 @@ class Ki {
             }
         }
 
-        private fun formatBase64(obj: ByteArray): String {
-            return ".base64(${Base64.getEncoder().encodeToString(obj)})"
+        // Format and parse a Base64 literal
+
+        /**
+         * Formats a Base64 Ki literal (base64 String representation of a byte array)
+         */
+        fun formatBase64(obj: ByteArray): String {
+            val encodedText = Base64.getEncoder().encodeToString(obj)
+
+            if(encodedText.length>30) {
+                var lines = encodedText.chunked(50)
+                var builder = StringBuilder("base64(\n");
+                for(line in lines)
+                    builder.append("\t$line\n")
+                return builder.toString() + ")"
+            } else {
+                return ".base64($encodedText)"
+            }
+        }
+
+        private const val BASE64_PREFIX_LENGTH = ".base64(".length
+        /**
+         * Parse a Ki Base64 literal with the for .base64(base64string)
+         *
+         * The characters in base64string may contain whitespace.
+         */
+        fun parseBase64(base64Literal: String): ByteArray {
+            var encString = base64Literal.replace(Regex("\\s+"), "")
+
+            if(encString == ".base64()")
+                return byteArrayOf()
+            if(encString.isBlank())
+                throw ParseException("Ki Base64 literal cannot be empty.", index = 0)
+            if(!encString.startsWith(".base64"))
+                throw ParseException("Ki Base64 literal must start with '.base64('", index = 0)
+            if(encString[encString.length-1]!=')')
+                throw ParseException("Ki Base64 literal must end with ')'", index = 0)
+
+            encString = encString.substring(BASE64_PREFIX_LENGTH, encString.length-1)
+
+            return Base64.getDecoder().decode(encString)
         }
 
         private fun formatMap(map: Map<*,*>): String {

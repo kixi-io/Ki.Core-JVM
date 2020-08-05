@@ -78,21 +78,19 @@ fun String.escape(quoteChar:Char = '"'): String {
 }
 
 // TODO: Needs to handle unicode escapes
-fun String.resolveEscapes(quoteChar:Char = '"'): String {
+fun String.resolveEscapes(quoteChar:Char? = '"'): String {
     var escape = false
     val sb = StringBuilder()
 
     for(c in this) {
         if(escape) {
-            sb.append(
-                when(c) {
-                    'n' -> sb.append('\n')
-                    't' -> sb.append('\t')
-                    'r' -> sb.append('\r')
-                    '\\' -> sb.append('\\')
-                    quoteChar -> sb.append(quoteChar)
-                    else -> throw ParseException("Invalid escape character '$c'")
-                })
+            when(c) {
+                't' -> sb.append('\t')
+                'r' -> sb.append('\r')
+                'n' -> sb.append('\n')
+                '\\' -> sb.append('\\')
+                else -> throw ParseException("Invalid escape character '$c'")
+            }
             escape = false
         } else if(c=='\\') {
             escape = true
@@ -101,10 +99,12 @@ fun String.resolveEscapes(quoteChar:Char = '"'): String {
             sb.append(c)
         }
     }
-    return sb.toString()
+
+    return if(quoteChar==null) sb.toString() else
+        sb.toString().replace("\\$quoteChar", "$quoteChar")
 }
 
-// What we really want is  this.isLetter() || this=='_' || this=='$' ||
+// What we really want is this.isLetter() || this=='_' || this=='$' ||
 // this.isEmojiSurrogate(), but I haven't put together the ranges for the latter, so this
 // works for now. It handles Unicode BMP emoji.
 
@@ -131,4 +131,8 @@ fun CharSequence.isKiIdentifier(): Boolean {
     for(c in this) if(!c.isKiIDChar()) return false
 
     return true
+}
+
+fun main() {
+    println("line1\nline2".resolveEscapes())
 }
