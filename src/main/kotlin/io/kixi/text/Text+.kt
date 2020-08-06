@@ -132,7 +132,3 @@ fun CharSequence.isKiIdentifier(): Boolean {
 
     return true
 }
-
-fun main() {
-    println("line1\nline2".resolveEscapes())
-}
