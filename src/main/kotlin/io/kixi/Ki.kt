@@ -579,6 +579,3 @@ class Ki {
     }
 }
 
-fun main() {
-    println("hello \\\"you\\\"".resolveEscapes('"'))
-}
