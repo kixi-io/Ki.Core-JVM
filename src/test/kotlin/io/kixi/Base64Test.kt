@@ -13,4 +13,9 @@ class Base64Test {
         assertEquals(base64Literal, Ki.formatBase64(byteArray))
     }
 
+    @Test fun testHello() {
+        assertEquals("Hello",
+            String(Ki.parseBase64(".base64(SGVsbG8=)")))
+    }
+
 }

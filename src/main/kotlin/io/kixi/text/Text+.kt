@@ -61,7 +61,7 @@ fun String.escape(quoteChar:Char = '"'): String {
     val escapeChars = ESCAPE_CHARS + quoteChar
 
     for(c in this) {
-       if(escapeChars.contains(c)) {
+       if(escapeChars.contains(c) || c==quoteChar) {
            sb.append("\\")
 
            when(c) {
@@ -89,6 +89,7 @@ fun String.resolveEscapes(quoteChar:Char? = '"'): String {
                 'r' -> sb.append('\r')
                 'n' -> sb.append('\n')
                 '\\' -> sb.append('\\')
+                quoteChar -> sb.append(quoteChar)
                 else -> throw ParseException("Invalid escape character '$c'")
             }
             escape = false

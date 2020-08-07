@@ -1,6 +1,8 @@
 package io.kixi
 
 import io.kixi.text.ParseException
+import io.kixi.text.escape
+import io.kixi.text.resolveEscapes
 import java.lang.Math.abs
 import java.math.BigDecimal
 import java.time.*
@@ -109,7 +111,7 @@ class Ki {
         fun format(obj: Any?): String {
             return when (obj) {
                 null -> "nil"
-                is String -> "\"$obj\""
+                is String -> "\"${obj.toString().escape()}\""
                 is Char -> "'$obj'"
                 is BigDecimal -> "${obj}m"
                 is Float -> "${obj}f"
@@ -134,7 +136,7 @@ class Ki {
 
             if(encodedText.length>30) {
                 var lines = encodedText.chunked(50)
-                var builder = StringBuilder("base64(\n");
+                var builder = StringBuilder(".base64(\n");
                 for(line in lines)
                     builder.append("\t$line\n")
                 return builder.toString() + ")"
@@ -575,4 +577,8 @@ class Ki {
             return true
         }
     }
+}
+
+fun main() {
+    println("hello \\\"you\\\"".resolveEscapes('"'))
 }
