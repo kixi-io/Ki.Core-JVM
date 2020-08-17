@@ -2,7 +2,6 @@ package io.kixi
 
 import io.kixi.text.ParseException
 import io.kixi.text.escape
-import io.kixi.text.resolveEscapes
 import java.lang.Math.abs
 import java.math.BigDecimal
 import java.time.*
@@ -135,11 +134,11 @@ class Ki {
             val encodedText = Base64.getEncoder().encodeToString(obj)
 
             if(encodedText.length>30) {
-                var lines = encodedText.chunked(50)
-                var builder = StringBuilder(".blob(\n");
+                val lines = encodedText.chunked(50)
+                val builder = StringBuilder(".blob(\n")
                 for(line in lines)
                     builder.append("\t$line\n")
-                return builder.toString() + ")"
+                return "$builder)"
             } else {
                 return ".blob($encodedText)"
             }
@@ -360,85 +359,80 @@ class Ki {
          */
         fun parseDuration(text: String): Duration {
             val parts = text.replace("_", "").split(':')
-            val sign = if (text[0]=='-') "-" else "";
+            val sign = if (text[0]=='-') "-" else ""
 
-            if (parts.size == 4) {
-                // is compound with day
-                val dayIndex = parts[0].indexOf("day")
-                if (dayIndex == -1) {
-                    throw ParseException(
-                        "Compound duration with day component must be " +
-                                "suffixed with \"day\" or \"days\"."
-                    )
-                }
-                return Duration.ofDays((parts[0].substring(0, dayIndex)).toLong())
-                    .plus(Duration.ofHours((sign + parts[1]).toLong()))
-                    .plus(Duration.ofMinutes((sign + (parts[2])).toLong())
-                    .plus(
-                        if(sign=="-") Duration.ofNanos(-secStringToNanos(parts[3]))
-                        else Duration.ofNanos(secStringToNanos(parts[3]))
-                    ))
-            } else if (parts.size == 3) {
-                // is compound without day
-                return Duration.ofHours((parts[0]).toLong())
-                    .plus(Duration.ofMinutes((sign + parts[1]).toLong()))
-                    .plus(
-                        if(sign=="-") Duration.ofNanos(-secStringToNanos(parts[2]))
-                        else Duration.ofNanos(secStringToNanos(parts[2]))
-                    )
-                    //.plus(Duration.ofSeconds(parts[2].toLong()))
-            } else if (parts.size == 1) {
-                // TODO: Fractional units for single unit durations.
-                return when {
-                    text.endsWith("day") -> {
-                        return Duration.ofDays((text.removeSuffix("day")).toLong())
-                    }
-                    text.endsWith("days") -> {
-                        return Duration.ofDays((text.removeSuffix("days")).toLong())
-                    }
-                    text.endsWith("h") -> {
-                        return Duration.ofHours((text.removeSuffix("h")).toLong())
-                    }
-                    text.endsWith("min") -> {
-                        return Duration.ofMinutes((text.removeSuffix("min")).toLong())
-                    }
-                    // We have to check "ms" and "ns" before "s"
-                    text.endsWith("ms") -> {
-                        return Duration.ofMillis((text.removeSuffix("ms")).toLong())
-                    }
-                    text.endsWith("ns") -> {
-                        return Duration.ofNanos((text.removeSuffix("ns")).toLong())
-                    }
-                    text.endsWith("s") -> {
-                        // Deal with fractional seconds
-                        var secText = text.removeSuffix("s")
-                        return  if(sign=="-") Duration.ofNanos(-secStringToNanos(
-                            secText
+            when (parts.size) {
+                4 -> {
+                    // is compound with day
+                    val dayIndex = parts[0].indexOf("day")
+                    if (dayIndex == -1) {
+                        throw ParseException(
+                            "Compound duration day components must be " +
+                                    "suffixed with \"day\" or \"days\"."
                         )
-                        )
-                                else Duration.ofNanos(secStringToNanos(secText))
                     }
-                    else -> throw ParseException("Unkown temporal unit in duration.")
+                    return Duration.ofDays((parts[0].substring(0, dayIndex)).toLong())
+                        .plus(Duration.ofHours((sign + parts[1]).toLong()))
+                        .plus(Duration.ofMinutes((sign + (parts[2])).toLong())
+                            .plus(
+                                if(sign=="-") Duration.ofNanos(-secStringToNanos(parts[3]))
+                                else Duration.ofNanos(secStringToNanos(parts[3]))
+                            ))
                 }
+                3 -> {
+                    // is compound without day
+                    return Duration.ofHours((parts[0]).toLong())
+                        .plus(Duration.ofMinutes((sign + parts[1]).toLong()))
+                        .plus(
+                            if(sign=="-") Duration.ofNanos(-secStringToNanos(parts[2]))
+                            else Duration.ofNanos(secStringToNanos(parts[2]))
+                        )
+                }
+                1 -> {
+                    // TODO: Fractional units for single unit durations.
+                    return when {
+                        text.endsWith("day") ->
+                            return Duration.ofDays((text.removeSuffix("day")).toLong())
+                        text.endsWith("days") ->
+                            return Duration.ofDays((text.removeSuffix("days")).toLong())
+                        text.endsWith("h") ->
+                            return Duration.ofHours((text.removeSuffix("h")).toLong())
+                        text.endsWith("min") ->
+                            return Duration.ofMinutes((text.removeSuffix("min")).toLong())
+                        // We have to check "ms" and "ns" before "s"
+                        text.endsWith("ms") ->
+                            return Duration.ofMillis((text.removeSuffix("ms")).toLong())
+                        text.endsWith("ns") ->
+                            return Duration.ofNanos((text.removeSuffix("ns")).toLong())
+                        text.endsWith("s") -> {
+                            // Deal with fractional seconds
+                            val secText = text.removeSuffix("s")
+                            return  if(sign=="-") Duration.ofNanos(-secStringToNanos(
+                                secText
+                            )
+                            )
+                            else Duration.ofNanos(secStringToNanos(secText))
+                        }
+                        else -> throw ParseException("Unkown temporal unit in duration.")
+                    }
+                }
+                else -> throw ParseException(
+                    """
+                        Can't parse Duration \"$text\": Wrong number of segments. Durations must
+                        be single unit (e.g. 5h) or compound with days:hours:minutes:seconds. Days
+                        are option and must be suffixed with "day" or "days"
+                        (e.g. 2days:05:30:00).
+                        """.trimIndent()
+                )
             }
 
-            // if(sign=="-") Duration.ofNanos(-secStringToNanos(parts[2]))
-            // else Duration.ofNanos(secStringToNanos(parts[2]))
-
-            throw ParseException(
-                """
-                Can't parse Duration \"$text\": Wrong number of segments. Durations must
-                be single unit (e.g. 5h) or compound with days:hours:minutes:seconds. Days
-                are option and must be suffixed with "day" or "days"
-                (e.g. 2days:05:30:00).
-                """.trimIndent())
         }
 
-        val NANO_ZEROS = "000000000"
+        private const val NANO_ZEROS = "000000000"
 
         private fun secStringToNanos(s: String): Long {
 
-            var dotIndex = s.indexOf('.')
+            val dotIndex = s.indexOf('.')
             if(dotIndex==-1)
                 return abs(s.toLong()) * 1_000_000_000L
 
@@ -446,8 +440,8 @@ class Ki {
 
             var nanos = abs(s.substring(0,dotIndex).toLong()) * 1_000_000_000L
 
-            var nanoText = s.substring(dotIndex+1)
-            var zeroPadding = NANO_ZEROS.substring(0, NANO_ZEROS.length - nanoText.length)
+            val nanoText = s.substring(dotIndex+1)
+            val zeroPadding = NANO_ZEROS.substring(0, NANO_ZEROS.length - nanoText.length)
 
             nanos+= (nanoText + zeroPadding).toLong()
 
@@ -473,7 +467,7 @@ class Ki {
 
             val nanosOfSec = totalNanos % 1_000_000_000L
 
-            var fractionalSec = if(nanosOfSec==0L) ""
+            val fractionalSec = if(nanosOfSec==0L) ""
             else "." + trimTrailing0s(String.format("%09d", nanosOfSec))
 
             // This is required due to a bug in java.time.Duration that incorrectly
