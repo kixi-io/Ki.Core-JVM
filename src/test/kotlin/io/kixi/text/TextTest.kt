@@ -2,6 +2,7 @@ package io.kixi.text
 
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 
 /**
@@ -16,7 +17,13 @@ class TextTest {
         assertTrue("foo5".isKiIdentifier())
         assertTrue("😀".isKiIdentifier(), "Test single emoji")
         assertTrue("👽alien".isKiIdentifier(), "Test emoji start")
-        // assertTrue("👨‍👩‍👦‍👦 $IS_ID".isKiIdentifier()) // TODO: Broken. Allow non-BMP emoji.
+        // assertTrue("👨‍👩‍👦‍👦".isKiIdentifier()) // TODO: Broken. Allow non-BMP emoji.
+    }
+
+    @Test fun testEscapeCharResolution() {
+        assertEquals("São Paulo", "S\\u00e3o Paulo".resolveEscapes())
+        assertEquals("\t\r\n\\", "\\t\\r\\n\\\\".resolveEscapes())
+        assertEquals("👌", "\\ud83d\\udc4c".resolveEscapes())
     }
 
     @Test fun testNotKiIdentifiers() {

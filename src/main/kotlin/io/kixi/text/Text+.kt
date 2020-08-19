@@ -1,12 +1,17 @@
 package io.kixi.text
 
+import io.kixi.log
 import java.util.*
 
 /**
  * A set of convenience methods for CharSequences
  */
 
-fun CharSequence.toList(delimiters:String = " \t", trim:Boolean = true, list:MutableList<String> = ArrayList<String>()):
+fun CharSequence.toList(
+    delimiters: String = " \t",
+    trim: Boolean = true,
+    list: MutableList<String> = ArrayList<String>()
+):
         List<String> {
 
     val st = StringTokenizer(this.toString(), delimiters)
@@ -55,7 +60,7 @@ fun Char.unicodeEscape(): String {
 
 const val ESCAPE_CHARS = "\t\n\r\\"
 
-fun String.escape(quoteChar:Char = '"'): String {
+fun String.escape(quoteChar: Char = '"'): String {
 
     val sb = StringBuilder()
     val escapeChars = ESCAPE_CHARS + quoteChar
@@ -77,28 +82,59 @@ fun String.escape(quoteChar:Char = '"'): String {
     return sb.toString()
 }
 
-// TODO: Needs to handle unicode escapes
-fun String.resolveEscapes(quoteChar:Char? = '"'): String {
+/**
+ * Resolve escapes within a string. For example, the text `\t` will be converted into a
+ * tab. This also handles unicode escapes in the form `\uxxxx`, where `x` is a
+ * hexidecimal digit.
+ *
+ * @param quoteChar The quote char being used to define this String, so we know to escape
+ * it.
+ */
+fun String.resolveEscapes(quoteChar: Char? = '"'): String {
     var escape = false
     val sb = StringBuilder()
 
-    for(c in this) {
+    var index = 0
+
+    outer@ while(index<length) {
+
+        var c = this[index]
+
         if(escape) {
             when(c) {
                 't' -> sb.append('\t')
                 'r' -> sb.append('\r')
                 'n' -> sb.append('\n')
+                'u' -> {
+                    if (this.length < index + 5)
+                        throw ParseException(
+                            """Unicode escape requires four hexidecimal
+                            digits. Got ${this.substring(index)}"""
+                        )
+                    index++
+                    var hexDigits = this.substring(index, index+4)
+
+                    try {
+                        val intValue = hexDigits.toInt(16)
+                        sb.append(intValue.toChar())
+                    } catch(nfe:NumberFormatException) {
+                        throw ParseException("Invalid char in unicode escape.", index, nfe)
+                    }
+                    index+=4
+                    escape = false
+                    continue@outer
+                }
                 '\\' -> sb.append('\\')
                 quoteChar -> sb.append(quoteChar)
-                else -> throw ParseException("Invalid escape character '$c'")
+                else -> throw ParseException("Invalid escape character '$c'", index = index)
             }
             escape = false
         } else if(c=='\\') {
             escape = true
-            continue
         } else {
             sb.append(c)
         }
+        index++
     }
 
     return if(quoteChar==null) sb.toString() else

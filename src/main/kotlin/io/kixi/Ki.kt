@@ -101,11 +101,11 @@ class Ki {
             .toFormatter()
 
         /**
-         * The Ki standard DATE_TIME format y/M/d-H:mm:ss.S(offset|-KiTZ|-Z)
-         *
-         * Note: Ki uses a 24 hour clock (0-23)
+         * Format an object using its Ki canonical form. For example, a String will be
+         * given quotes. It's newlines, carriage returns, tabs and backslashes
+         * will be escaped. DateTime and Durations will use
+         * [their canonical Ki form](https://github.com/kixi-io/Ki.Docs/wiki/Ki-Types#Date).
          */
-
         @JvmStatic
         fun format(obj: Any?): String {
             return when (obj) {
