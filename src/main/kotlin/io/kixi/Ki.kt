@@ -112,8 +112,9 @@ class Ki {
                 null -> "nil"
                 is String -> "\"${obj.toString().escape()}\""
                 is Char -> "'$obj'"
-                is BigDecimal -> "${obj}m"
+                is BigDecimal -> "${obj}bd"
                 is Float -> "${obj}f"
+                is Long -> "${obj}L"
                 is Map<*,*> -> formatMap(obj)
                 is Collection<*> -> formatCollection(obj)
                 is LocalDate -> formatLocalDate(obj)
