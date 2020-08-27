@@ -126,6 +126,11 @@ class Ki {
             }
         }
 
+        /**
+         * Parse a Ki Type literal.
+         */
+        // TODO: fun parse(text:String ) {}
+
         // Format and parse a Blob literal
 
         /**
