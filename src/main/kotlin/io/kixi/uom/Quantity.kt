@@ -525,25 +525,8 @@ class Quantity : Comparable<Quantity> {
             is BigDecimal -> quantity1 - value2
             is Long -> quantity1 - value2
             is Double -> quantity1 - value2
-            is Float -> quantity1 + value2
+            is Float -> quantity1 - value2
             else -> quantity1 - value2.toInt()
         }
     }
-}
-
-fun main() {
-    println(Quantity(5, Unit.mm))
-    println(Quantity("7.2cm"))
-    println("---")
-    println(Quantity(3, Unit.cm))
-    println(Quantity(2, Unit.mm))
-    println("---")
-    println(Quantity(3, Unit.cm) + Quantity(1, Unit.cm))
-    println(Quantity(3, Unit.cm) - Quantity(1, Unit.cm))
-    println("---")
-    println(Quantity(3, Unit.cm) + Quantity(2, Unit.mm))
-    println(Quantity(3, Unit.cm) - Quantity(2, Unit.mm))
-    println("---")
-    println(Quantity(3, Unit.mm) + Quantity(2, Unit.cm))
-    println(Quantity(3, Unit.mm) - Quantity(2, Unit.cm))
 }
