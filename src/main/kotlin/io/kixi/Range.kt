@@ -2,7 +2,8 @@ package io.kixi
 
 /**
  * A Ki Range can be inclusive or exclusive on both ends, may be reversed (e.g. 5..1),
- * and can be open on the left or right.
+ * and can be open on the left or right. Note: Ranges that are open should set the same
+ * value for left and right.
  *
  * Reversed ranges represent downward progressions. Open ended ranges indicate that one
  * end is not bounded.

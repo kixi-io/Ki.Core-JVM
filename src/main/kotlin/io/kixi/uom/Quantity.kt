@@ -41,7 +41,7 @@ class Quantity : Comparable<Quantity> {
 
         var symbolIndex = 0
         for(i in 0..text.length) {
-            if (text[i].isKiIDStart()) {
+            if ((text[i].isKiIDStart() && text[i]!='_') || text[i] == 'ℓ') {
                 symbolIndex = i
                 break
             }
@@ -61,7 +61,7 @@ class Quantity : Comparable<Quantity> {
         if(unit == null)
             throw NoSuchUnitException(symbol)
 
-        val numText = text.substring(0, symbolIndex)
+        val numText = text.substring(0, symbolIndex).replace("_", "")
 
         val numValue: Number = when(numTypeChar) {
             'd','D' -> numText.toDouble()

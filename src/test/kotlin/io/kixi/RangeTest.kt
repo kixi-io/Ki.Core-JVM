@@ -9,7 +9,7 @@ class RangeTest {
 
     @Test fun testContainsInclusive() {
         // Closed
-        var r = Range(1, 10, Range.Type.Inclusive, false, false)
+        var r = Range<Int>(1, 10, Range.Type.Inclusive, false, false)
         assertFalse(r.contains(-1))
         assertFalse(r.contains(0))
         assertFalse(r.contains(11))
@@ -19,8 +19,8 @@ class RangeTest {
         assertTrue(r.contains(10))
 
         // Open Left
-        r = Range(
-            Integer.MIN_VALUE,
+        r = Range<Int>(
+            10,
             10,
             Range.Type.Inclusive,
             true,
@@ -34,9 +34,9 @@ class RangeTest {
         assertTrue(r.contains(10))
 
         // Open Right
-        r = Range(
+        r = Range<Int>(
             10,
-            Int.MAX_VALUE,
+            10,
             Range.Type.Inclusive,
             false,
             true
