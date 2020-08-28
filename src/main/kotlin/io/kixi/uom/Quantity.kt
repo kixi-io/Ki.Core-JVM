@@ -7,14 +7,26 @@ import java.math.BigDecimal
 
 /**
  * A quantity is an amount of a given unit. The default value types are Int for integer
- * types and BigDecimal for decimal numbers. These can be overridden with :L, :d
- * and :f.
+ * types and BigDecimal for decimal numbers. These can be overridden with `:L`, `:d`
+ * and `:f`.
  *
  * ```
  *   5cm
  *   23.5kg
  *   235cm3:L // 235 cubic centimeters represented as a Long
+ *
+ *   // Using Quantities in Kotlin expressions
+ *
+ *   println(Quantity("2cm") - Quantity("5mm"))
+ *   value->  15mm
  * ````
+ *
+ * The Quantity class provides runtime safety for the mixing of incompatible units. It
+ * does not provide compiled-time safety via generics as, for example,
+ * [JSR 363: Units of Measurement API](https://jcp.org/en/jsr/detail?id=363) does. This
+ * was an intentional design decision to keep the API small and simple. We may revisit
+ * it in a future version. Note that it is trivial to convert a Ki Quantity and Unit to
+ * their genericized JSR 363 counterparts.
  */
 class Quantity : Comparable<Quantity> {
 
