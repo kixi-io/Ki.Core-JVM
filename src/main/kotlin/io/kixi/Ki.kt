@@ -12,7 +12,7 @@ import java.time.temporal.ChronoField.*
 import java.util.*
 
 /**
- * A set of convenience methods for working with Ki types, parsing and formatting.
+ * A set of convenience methods for working with KTS (Ki Type System), parsing and formatting.
  */
 class Ki {
     companion object {

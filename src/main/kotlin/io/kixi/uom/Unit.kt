@@ -2,13 +2,13 @@ package io.kixi.uom
 
 import java.math.BigDecimal
 import java.math.MathContext
-import java.util.*
+import java.util.TreeMap
 
 /**
  * An SI unit of measure
  */
-data class Unit(val symbol: String, val type: Type, val factor: BigDecimal,
-                val unicode: String = symbol) {
+class Unit(val symbol: String, val type: Type, val factor: BigDecimal,
+                val unicode: String = symbol)  {
 
     /**
      * An SI unit of measure type.
@@ -39,13 +39,16 @@ data class Unit(val symbol: String, val type: Type, val factor: BigDecimal,
         CONDUCTANCE("S"),
         CAPACITANCE("F");
 
-        val baseUnit: Unit
-            get() = getUnit(this.baseSymbol)!!
+        val baseUnit: Unit get() = getUnit(this.baseSymbol)!!
     }
 
     val description get() = "$symbol ${type.name.toLowerCase()} ${factor.toPlainString()}"
 
     override fun toString(): String = symbol
+    override fun equals(other: Any?): Boolean = other != null && other is Unit &&
+            other.symbol == symbol
+    override fun hashCode(): Int = symbol.hashCode() or 31
+
 
     /**
      * The number by which you multiply to get a conversion to the target unit.
@@ -89,18 +92,18 @@ data class Unit(val symbol: String, val type: Type, val factor: BigDecimal,
         /* Common Derived Units -------- */
 
         // Area ////
-        val nm2 = addUnit(Unit("nm2", Type.AREA, BigDecimal(".000000000000000001")))
-        val mm2 = addUnit(Unit("mm2", Type.AREA, BigDecimal(".000001")))
-        val cm2 = addUnit(Unit("cm2", Type.AREA, BigDecimal(".0001")))
-        val m2 = addUnit(Unit("m2", Type.AREA, BigDecimal("1")))
-        val km2 = addUnit(Unit("km2", Type.AREA, BigDecimal("1000000")))
+        val nm2 = addUnit(Unit("nm²", Type.AREA, BigDecimal(".000000000000000001")))
+        val mm2 = addUnit(Unit("mm²", Type.AREA, BigDecimal(".000001")))
+        val cm2 = addUnit(Unit("cm²", Type.AREA, BigDecimal(".0001")))
+        val m2 = addUnit(Unit("m²", Type.AREA, BigDecimal("1")))
+        val km2 = addUnit(Unit("km²", Type.AREA, BigDecimal("1000000")))
 
         // Volume ////
-        val nm3 = addUnit(Unit("nm3", Type.VOLUME, BigDecimal(".000000000000000000000000001")))
-        val mm3 = addUnit(Unit("mm3", Type.VOLUME, BigDecimal(".000000001")))
-        val cm3 = addUnit(Unit("cm3", Type.VOLUME, BigDecimal(".000001")))
-        val m3 = addUnit(Unit("m3", Type.VOLUME, BigDecimal("1")))
-        val km3 = addUnit(Unit("km3", Type.VOLUME, BigDecimal("1000000000")))
+        val nm3 = addUnit(Unit("nm³", Type.VOLUME, BigDecimal(".000000000000000000000000001")))
+        val mm3 = addUnit(Unit("mm³", Type.VOLUME, BigDecimal(".000000001")))
+        val cm3 = addUnit(Unit("cm³", Type.VOLUME, BigDecimal(".000001")))
+        val m3 = addUnit(Unit("m³", Type.VOLUME, BigDecimal("1")))
+        val km3 = addUnit(Unit("km³", Type.VOLUME, BigDecimal("1000000000")))
 
         /**
          * We have to use ℓ to avoid a conflict with L for Long integer literals. LT is accepted when parsing, but ℓ is
@@ -117,11 +120,11 @@ data class Unit(val symbol: String, val type: Type, val factor: BigDecimal,
 
         @JvmStatic
         fun getUnit(symbol:String) : Unit? {
-            synchronized(Unit.javaClass) {
-                var key = when(symbol) {
+            synchronized(Unit::class.java) {
+                val key = when(symbol) {
                     "LT" -> "ℓ"
                     "mL" -> "mℓ"
-                    else -> symbol
+                    else -> convertExponent(symbol)
                 }
 
                 return UNITS.get(key)
@@ -130,10 +133,19 @@ data class Unit(val symbol: String, val type: Type, val factor: BigDecimal,
 
         @JvmStatic
         fun addUnit(unit: Unit) : Unit {
-            synchronized(Unit.javaClass) {
+            synchronized(Unit::class.java) {
                 UNITS.put(unit.symbol, unit)
                 return unit
             }
+        }
+
+        /**
+         * Converts symbols ending with "2" or "3" to exponents
+         */
+        private fun convertExponent(text: String) = when {
+            text.last()=='2' -> text.dropLast(1) + '²'
+            text.last()=='3' -> text.dropLast(1) + '³'
+            else -> text
         }
     }
 }

@@ -4,7 +4,6 @@ import io.kixi.isWhole
 import io.kixi.text.isKiIDStart
 import java.lang.NumberFormatException
 import java.math.BigDecimal
-import kotlin.reflect.typeOf
 
 /**
  * A quantity is an amount of a given unit. The default value types are Int for integer
@@ -17,13 +16,66 @@ import kotlin.reflect.typeOf
  *   235cm3:L // 235 cubic centimeters represented as a Long
  * ````
  */
-data class Quantity(val value:Number, val unit:Unit) {
+class Quantity : Comparable<Quantity> {
+
+    val value: Number
+    val unit: Unit
+
+    constructor(value:Number, unit:Unit) {
+        this.value = value
+        this.unit = unit
+    }
 
     /**
-     * TODO: override compareTo, convert to normal (non-data) class
+     * Create a quantity from a string formatted as an integer or decimal number
+     * followed by a unit symbol suffix.
+     *
+     * @param text String
+     * @throws NumberFormatException If the quantity is malformed
      */
+    constructor(text:String) {
+        // TODO: fix - doesn't work for scientific notation
 
-    // TODO: operators for basic arithmetic
+        if(text.isBlank())
+            throw NumberFormatException("Quantity string cannot be empty.")
+
+        var symbolIndex = 0
+        for(i in 0..text.length) {
+            if (text[i].isKiIDStart()) {
+                symbolIndex = i
+                break
+            }
+        }
+
+        var symbol = text.substring(symbolIndex)
+        val numTypeIndex = symbol.indexOf(':')
+        var numTypeChar = '\u0000'
+
+        if(numTypeIndex!=-1) {
+            numTypeChar = symbol.last()
+            symbol = symbol.substring(0, numTypeIndex)
+        }
+
+        val unit = Unit.getUnit(symbol)
+
+        if(unit == null)
+            throw NoSuchUnitException(symbol)
+
+        val numText = text.substring(0, symbolIndex)
+
+        val numValue: Number = when(numTypeChar) {
+            'd','D' -> numText.toDouble()
+            'L' -> numText.toLong()
+            'f', 'F' -> numText.toFloat()
+            // Default (no num type specified)
+            '\u0000' -> if(numText.contains('.')) BigDecimal(numText) else
+                numText.toInt()
+            else -> throw NumberFormatException("'$numTypeChar' is not a valid number type specifier in a Quantity")
+        }
+
+        this.value = numValue
+        this.unit = unit
+    }
 
     override fun toString(): String {
 
@@ -59,6 +111,11 @@ data class Quantity(val value:Number, val unit:Unit) {
         }
     }
 
+    /**
+     * This does not consider 1cm and 10mm to be equal, because quantities use units
+     * rather than unit types. To check equivalence of the quantity use
+     * equivalent(Quantity)
+     */
     override fun equals(other: Any?): Boolean {
         if(other !is Quantity || other.unit!=unit || value::class != other.value::class)
             return false
@@ -66,58 +123,427 @@ data class Quantity(val value:Number, val unit:Unit) {
         return toString().equals(other.toString())
     }
 
-    companion object {
-        /**
-         * Create a quantity from a string formatted as an integer or decimal number
-         * followed by a unit symbol suffix.
-         *
-         * @param text String
-         * @throws NumberFormatException If the quantity is malformed
-         */
-        @JvmStatic
-        fun parse(text:String): Quantity {
-            // TODO: doesn't work for scientific notation
-            // TODO: doesn't parse number type specifier after unit (e.g. 5.2cm:f)
+    fun equivalent(other: Quantity): Boolean {
+        return this convertTo this.unit.type.baseUnit ==
+                other convertTo other.unit.type.baseUnit
+    }
 
-            if(text.isBlank())
-                throw NumberFormatException("Quantity string cannot be empty.")
+    override fun hashCode(): Int {
+        var result = value.hashCode()
+        result = 31 * result + unit.hashCode()
+        return result
+    }
 
-            var symbolIndex = 0
-            for(i in 0..text.length) {
-                if (text[i].isKiIDStart()) {
-                    symbolIndex = i
-                    break
-                }
+    override fun compareTo(other: Quantity): Int {
+        if(other.unit.type != unit.type)
+            throw IncompatibleUnitsException(unit, other.unit)
+
+        var quantity1 = this
+        var quantity2 = other
+
+        if(unit == other.unit) {
+            // no unit conversion needed
+        } else if (this.unit.factor < other.unit.factor) {
+            quantity2 = other convertTo this.unit
+        } else {
+            quantity1 = this convertTo other.unit
+        }
+
+        val value1 = quantity1.value
+        val value2 = quantity2.value
+
+        return when (value1) {
+            // This looks odd, but the "is" check performs an implicit cast
+            is Int -> when(value2) {
+                is Int -> value1.compareTo(value2)
+                is BigDecimal -> value1.toBigDecimal().compareTo(value2)
+                is Long -> value1.compareTo(value2)
+                is Double -> value1.compareTo(value2)
+                is Float -> value1.compareTo(value2)
+                else -> value1.compareTo(value2.toInt())
             }
-
-
-            var symbol = text.substring(symbolIndex)
-            val numTypeIndex = symbol.indexOf(':')
-            var numTypeChar = '\u0000'
-
-            if(numTypeIndex!=-1) {
-                numTypeChar = symbol.last()
-                symbol = symbol.substring(0, numTypeIndex)
+            is BigDecimal -> when(value2) {
+                is Int -> value1.compareTo(value2.toBigDecimal())
+                is BigDecimal -> value1.compareTo(value2)
+                is Long -> value1.compareTo(value2.toBigDecimal())
+                is Double -> value1.compareTo(value2.toBigDecimal())
+                is Float -> value1.compareTo(value2.toBigDecimal())
+                else -> value1.compareTo(value2.toInt().toBigDecimal())
             }
-
-            val unit = Unit.getUnit(symbol)
-
-            if(unit == null)
-                throw NoSuchUnitException(symbol)
-
-            val numText = text.substring(0, symbolIndex)
-
-            val numValue: Number = when(numTypeChar) {
-                'd','D' -> numText.toDouble()
-                'L' -> numText.toLong()
-                'f', 'F' -> numText.toFloat()
-                // Default (no num type specified)
-                '\u0000' -> if(numText.contains('.')) BigDecimal(numText) else
-                    Integer.parseInt(numText)
-                else -> throw NumberFormatException("'$numTypeChar' is not a valid number type specifier in a Quantity")
+            is Long -> when(value2) {
+                is Int -> value1.compareTo(value2)
+                is BigDecimal -> value1.toBigDecimal().compareTo(value2)
+                is Long -> value1.compareTo(value2)
+                is Double -> value1.compareTo(value2)
+                is Float -> value1.compareTo(value2)
+                else -> value1.compareTo(value2.toInt())
             }
-
-            return Quantity(numValue, unit)
+            is Double -> when(value2) {
+                is Int -> value1.compareTo(value2)
+                is BigDecimal -> value1.toBigDecimal().compareTo(value2)
+                is Long -> value1.compareTo(value2)
+                is Double -> value1.compareTo(value2)
+                is Float -> value1.compareTo(value2)
+                else -> value1.compareTo(value2.toInt())
+            }
+            is Float -> when(value2) {
+                is Int -> value1.compareTo(value2)
+                is BigDecimal -> value1.toBigDecimal().compareTo(value2)
+                is Long -> value1.compareTo(value2)
+                is Double -> value1.compareTo(value2)
+                is Float -> value1.compareTo(value2)
+                else -> value1.compareTo(value2.toInt())
+            }
+            else -> when(value2) {
+                is Int -> value1.toInt().compareTo(value2)
+                is BigDecimal -> value1.toInt().toBigDecimal().compareTo(value2)
+                is Long -> value1.toInt().compareTo(value2)
+                is Double -> value1.toInt().compareTo(value2)
+                is Float -> value1.toInt().compareTo(value2)
+                else -> value1.toInt().compareTo(value2.toInt())
+            }
         }
     }
+
+    // Operators ////
+
+    // Int operand
+    operator fun plus(operand: Int): Quantity = when(value) {
+        // This looks odd, but the "is" check performs an implicit cast
+        is Int -> Quantity(value + operand, unit)
+        is BigDecimal -> Quantity(value + operand.toBigDecimal(), unit)
+        is Long -> Quantity(value + operand, unit)
+        is Double -> Quantity(value + operand, unit)
+        is Float -> Quantity(value + operand, unit)
+        else -> Quantity(value.toInt() + operand, unit) // Byte & Short
+    }
+
+    operator fun minus(operand: Int): Quantity = when(value) {
+        // This looks odd, but the "is" check performs an implicit cast
+        is Int -> Quantity(value - operand, unit)
+        is BigDecimal -> Quantity(value - operand.toBigDecimal(), unit)
+        is Long -> Quantity(value - operand, unit)
+        is Double -> Quantity(value - operand, unit)
+        is Float -> Quantity(value - operand, unit)
+        else -> Quantity(value.toInt() - operand, unit)
+    }
+
+    operator fun times(operand: Int): Quantity = when(value) {
+        // This looks odd, but the "is" check performs an implicit cast
+        is Int -> Quantity(value * operand, unit)
+        is BigDecimal -> Quantity(value * operand.toBigDecimal(), unit)
+        is Long -> Quantity(value * operand, unit)
+        is Double -> Quantity(value * operand, unit)
+        is Float -> Quantity(value * operand, unit)
+        else -> Quantity(value.toInt() * operand, unit)
+    }
+
+    operator fun div(operand: Int): Quantity = when(value) {
+        // This looks odd, but the "is" check performs an implicit cast
+        is Int -> Quantity(value / operand, unit)
+        is BigDecimal -> Quantity(value / operand.toBigDecimal(), unit)
+        is Long -> Quantity(value / operand, unit)
+        is Double -> Quantity(value / operand, unit)
+        is Float -> Quantity(value / operand, unit)
+        else -> Quantity(value.toInt() / operand, unit)
+    }
+
+    operator fun rem(operand: Int): Quantity = when(value) {
+        // This looks odd, but the "is" check performs an implicit cast
+        is Int -> Quantity(value % operand, unit)
+        is BigDecimal -> Quantity(value % operand.toBigDecimal(), unit)
+        is Long -> Quantity(value % operand, unit)
+        is Double -> Quantity(value % operand, unit)
+        is Float -> Quantity(value % operand, unit)
+        else -> Quantity(value.toInt() % operand, unit)
+    }
+
+    // Long operand
+    operator fun plus(operand: Long): Quantity = when(value) {
+        // This looks odd, but the "is" check performs an implicit cast
+        is Int -> Quantity(value + operand, unit)
+        is BigDecimal -> Quantity(value + operand.toBigDecimal(), unit)
+        is Long -> Quantity(value + operand, unit)
+        is Double -> Quantity(value + operand, unit)
+        is Float -> Quantity(value + operand, unit)
+        else -> Quantity(value.toInt() + operand, unit) // Byte & Short
+    }
+
+    operator fun minus(operand: Long): Quantity = when(value) {
+        // This looks odd, but the "is" check performs an implicit cast
+        is Int -> Quantity(value - operand, unit)
+        is BigDecimal -> Quantity(value - operand.toBigDecimal(), unit)
+        is Long -> Quantity(value - operand, unit)
+        is Double -> Quantity(value - operand, unit)
+        is Float -> Quantity(value - operand, unit)
+        else -> Quantity(value.toInt() - operand, unit)
+    }
+
+    operator fun times(operand: Long): Quantity = when(value) {
+        // This looks odd, but the "is" check performs an implicit cast
+        is Int -> Quantity(value * operand, unit)
+        is BigDecimal -> Quantity(value * operand.toBigDecimal(), unit)
+        is Long -> Quantity(value * operand, unit)
+        is Double -> Quantity(value * operand, unit)
+        is Float -> Quantity(value * operand, unit)
+        else -> Quantity(value.toInt() * operand, unit)
+    }
+
+    operator fun div(operand: Long): Quantity = when(value) {
+        // This looks odd, but the "is" check performs an implicit cast
+        is Int -> Quantity(value / operand, unit)
+        is BigDecimal -> Quantity(value / operand.toBigDecimal(), unit)
+        is Long -> Quantity(value / operand, unit)
+        is Double -> Quantity(value / operand, unit)
+        is Float -> Quantity(value / operand, unit)
+        else -> Quantity(value.toInt() / operand, unit)
+    }
+
+    operator fun rem(operand: Long): Quantity = when(value) {
+        // This looks odd, but the "is" check performs an implicit cast
+        is Int -> Quantity(value % operand, unit)
+        is BigDecimal -> Quantity(value % operand.toBigDecimal(), unit)
+        is Long -> Quantity(value % operand, unit)
+        is Double -> Quantity(value % operand, unit)
+        is Float -> Quantity(value % operand, unit)
+        else -> Quantity(value.toInt() % operand, unit)
+    }
+
+    // Float operand
+    operator fun plus(operand: Float): Quantity = when(value) {
+        // This looks odd, but the "is" check performs an implicit cast
+        is Int -> Quantity(value + operand, unit)
+        is BigDecimal -> Quantity(value + operand.toBigDecimal(), unit)
+        is Long -> Quantity(value + operand, unit)
+        is Double -> Quantity(value + operand, unit)
+        is Float -> Quantity(value + operand, unit)
+        else -> Quantity(value.toInt() + operand, unit) // Byte & Short
+    }
+
+    operator fun minus(operand: Float): Quantity = when(value) {
+        // This looks odd, but the "is" check performs an implicit cast
+        is Int -> Quantity(value - operand, unit)
+        is BigDecimal -> Quantity(value - operand.toBigDecimal(), unit)
+        is Long -> Quantity(value - operand, unit)
+        is Double -> Quantity(value - operand, unit)
+        is Float -> Quantity(value - operand, unit)
+        else -> Quantity(value.toInt() - operand, unit)
+    }
+
+    operator fun times(operand: Float): Quantity = when(value) {
+        // This looks odd, but the "is" check performs an implicit cast
+        is Int -> Quantity(value * operand, unit)
+        is BigDecimal -> Quantity(value * operand.toBigDecimal(), unit)
+        is Long -> Quantity(value * operand, unit)
+        is Double -> Quantity(value * operand, unit)
+        is Float -> Quantity(value * operand, unit)
+        else -> Quantity(value.toInt() * operand, unit)
+    }
+
+    operator fun div(operand: Float): Quantity = when(value) {
+        // This looks odd, but the "is" check performs an implicit cast
+        is Int -> Quantity(value / operand, unit)
+        is BigDecimal -> Quantity(value / operand.toBigDecimal(), unit)
+        is Long -> Quantity(value / operand, unit)
+        is Double -> Quantity(value / operand, unit)
+        is Float -> Quantity(value / operand, unit)
+        else -> Quantity(value.toInt() / operand, unit)
+    }
+
+    operator fun rem(operand: Float): Quantity = when(value) {
+        // This looks odd, but the "is" check performs an implicit cast
+        is Int -> Quantity(value % operand, unit)
+        is BigDecimal -> Quantity(value % operand.toBigDecimal(), unit)
+        is Long -> Quantity(value % operand, unit)
+        is Double -> Quantity(value % operand, unit)
+        is Float -> Quantity(value % operand, unit)
+        else -> Quantity(value.toInt() % operand, unit)
+    }
+
+    // Double operand
+    operator fun plus(operand: Double): Quantity = when(value) {
+        // This looks odd, but the "is" check performs an implicit cast
+        is Int -> Quantity(value + operand, unit)
+        is BigDecimal -> Quantity(value + operand.toBigDecimal(), unit)
+        is Long -> Quantity(value + operand, unit)
+        is Double -> Quantity(value + operand, unit)
+        is Float -> Quantity(value + operand, unit)
+        else -> Quantity(value.toInt() + operand, unit) // Byte & Short
+    }
+
+    operator fun minus(operand: Double): Quantity = when(value) {
+        // This looks odd, but the "is" check performs an implicit cast
+        is Int -> Quantity(value - operand, unit)
+        is BigDecimal -> Quantity(value - operand.toBigDecimal(), unit)
+        is Long -> Quantity(value - operand, unit)
+        is Double -> Quantity(value - operand, unit)
+        is Float -> Quantity(value - operand, unit)
+        else -> Quantity(value.toInt() - operand, unit)
+    }
+
+    operator fun times(operand: Double): Quantity = when(value) {
+        // This looks odd, but the "is" check performs an implicit cast
+        is Int -> Quantity(value * operand, unit)
+        is BigDecimal -> Quantity(value * operand.toBigDecimal(), unit)
+        is Long -> Quantity(value * operand, unit)
+        is Double -> Quantity(value * operand, unit)
+        is Float -> Quantity(value * operand, unit)
+        else -> Quantity(value.toInt() * operand, unit)
+    }
+
+    operator fun div(operand: Double): Quantity = when(value) {
+        // This looks odd, but the "is" check performs an implicit cast
+        is Int -> Quantity(value / operand, unit)
+        is BigDecimal -> Quantity(value / operand.toBigDecimal(), unit)
+        is Long -> Quantity(value / operand, unit)
+        is Double -> Quantity(value / operand, unit)
+        is Float -> Quantity(value / operand, unit)
+        else -> Quantity(value.toInt() / operand, unit)
+    }
+
+    operator fun rem(operand: Double): Quantity = when(value) {
+        // This looks odd, but the "is" check performs an implicit cast
+        is Int -> Quantity(value % operand, unit)
+        is BigDecimal -> Quantity(value % operand.toBigDecimal(), unit)
+        is Long -> Quantity(value % operand, unit)
+        is Double -> Quantity(value % operand, unit)
+        is Float -> Quantity(value % operand, unit)
+        else -> Quantity(value.toInt() % operand, unit)
+    }
+
+    // BigDecimal operand
+    operator fun plus(operand: BigDecimal): Quantity = when(value) {
+        // This looks odd, but the "is" check performs an implicit cast
+        is Int -> Quantity(value.toBigDecimal() + operand, unit)
+        is BigDecimal -> Quantity(value + operand, unit)
+        is Long -> Quantity(value.toBigDecimal() + operand, unit)
+        is Double -> Quantity(value.toBigDecimal() + operand, unit)
+        is Float -> Quantity(value.toBigDecimal() + operand, unit)
+        else -> Quantity(value.toInt().toBigDecimal() + operand, unit) // Byte & Short
+    }
+
+    operator fun minus(operand: BigDecimal): Quantity = when(value) {
+        // This looks odd, but the "is" check performs an implicit cast
+        is Int -> Quantity(value.toBigDecimal() - operand, unit)
+        is BigDecimal -> Quantity(value - operand, unit)
+        is Long -> Quantity(value.toBigDecimal() - operand, unit)
+        is Double -> Quantity(value.toBigDecimal() - operand, unit)
+        is Float -> Quantity(value.toBigDecimal() - operand, unit)
+        else -> Quantity(value.toInt().toBigDecimal() - operand, unit)
+    }
+
+    operator fun times(operand: BigDecimal): Quantity = when(value) {
+        // This looks odd, but the "is" check performs an implicit cast
+        is Int -> Quantity(value.toBigDecimal() * operand, unit)
+        is BigDecimal -> Quantity(value * operand, unit)
+        is Long -> Quantity(value.toBigDecimal() * operand, unit)
+        is Double -> Quantity(value.toBigDecimal() * operand, unit)
+        is Float -> Quantity(value.toBigDecimal() * operand, unit)
+        else -> Quantity(value.toInt().toBigDecimal() * operand, unit)
+    }
+
+    operator fun div(operand: BigDecimal): Quantity = when(value) {
+        // This looks odd, but the "is" check performs an implicit cast
+        is Int -> Quantity(value.toBigDecimal() / operand, unit)
+        is BigDecimal -> Quantity(value / operand, unit)
+        is Long -> Quantity(value.toBigDecimal() / operand, unit)
+        is Double -> Quantity(value.toBigDecimal() / operand, unit)
+        is Float -> Quantity(value.toBigDecimal() / operand, unit)
+        else -> Quantity(value.toInt().toBigDecimal() / operand, unit)
+    }
+
+    operator fun rem(operand: BigDecimal): Quantity = when(value) {
+        // This looks odd, but the "is" check performs an implicit cast
+        is Int -> Quantity(value.toBigDecimal() % operand, unit)
+        is BigDecimal -> Quantity(value % operand, unit)
+        is Long -> Quantity(value.toBigDecimal() % operand, unit)
+        is Double -> Quantity(value.toBigDecimal() % operand, unit)
+        is Float -> Quantity(value.toBigDecimal() % operand, unit)
+        else -> Quantity(value.toInt().toBigDecimal() % operand, unit)
+    }
+
+    // Quantity operand
+    /**
+     * Adds the quantities. The returned quantity will use the smaller of the two
+     * units (e.g. 2cm + 3mm returns 23mm)
+     *
+     * @throws IncompatibleUnitsException if the units don't have the same Unit.Type
+     */
+    operator fun plus(operand: Quantity): Quantity {
+        if(operand.unit.type!= unit.type)
+            throw IncompatibleUnitsException(unit, operand.unit)
+
+        var quantity1 = this
+        var quantity2 = operand
+
+        if(unit == operand.unit) {
+            // no unit conversion needed
+        } else if (this.unit.factor < operand.unit.factor) {
+            quantity2 = operand convertTo this.unit
+        } else {
+            quantity1 = this convertTo operand.unit
+        }
+
+        val value2 = quantity2.value
+
+        return when (value2) {
+            // This looks odd, but the "is" check performs an implicit cast
+            is Int -> quantity1 + value2
+            is BigDecimal -> quantity1 + value2
+            is Long -> quantity1 + value2
+            is Double -> quantity1 + value2
+            is Float -> quantity1 + value2
+            else -> quantity1 + value2.toInt()
+        }
+    }
+
+    /**
+     * Subtracts the operand. The returned quantity will use the smaller of the two
+     * units (e.g. 2cm - 3mm returns 17mm)
+     *
+     * @throws IncompatibleUnitsException if the units don't have the same Unit.Type
+     */
+    operator fun minus(operand: Quantity): Quantity {
+        if(operand.unit.type!= unit.type)
+            throw IncompatibleUnitsException(unit, operand.unit)
+
+        var quantity1 = this
+        var quantity2 = operand
+
+        if(unit == operand.unit) {
+            // no unit conversion needed
+        } else if (this.unit.factor < operand.unit.factor) {
+            quantity2 = operand convertTo this.unit
+        } else {
+            quantity1 = this convertTo operand.unit
+        }
+
+        val value2 = quantity2.value
+        return when (value2) {
+            // This looks odd, but the "is" check performs an implicit cast
+            is Int -> quantity1 - value2
+            is BigDecimal -> quantity1 - value2
+            is Long -> quantity1 - value2
+            is Double -> quantity1 - value2
+            is Float -> quantity1 + value2
+            else -> quantity1 - value2.toInt()
+        }
+    }
+}
+
+fun main() {
+    println(Quantity(5, Unit.mm))
+    println(Quantity("7.2cm"))
+    println("---")
+    println(Quantity(3, Unit.cm))
+    println(Quantity(2, Unit.mm))
+    println("---")
+    println(Quantity(3, Unit.cm) + Quantity(1, Unit.cm))
+    println(Quantity(3, Unit.cm) - Quantity(1, Unit.cm))
+    println("---")
+    println(Quantity(3, Unit.cm) + Quantity(2, Unit.mm))
+    println(Quantity(3, Unit.cm) - Quantity(2, Unit.mm))
+    println("---")
+    println(Quantity(3, Unit.mm) + Quantity(2, Unit.cm))
+    println(Quantity(3, Unit.mm) - Quantity(2, Unit.cm))
 }
