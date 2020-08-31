@@ -1,14 +1,16 @@
 package io.kixi.uom
 
-import io.kixi.isWhole
+import io.kixi.whole
 import io.kixi.text.isKiIDStart
+import io.kixi.uom.Quantity.Companion.length
+import io.kixi.uom.Quantity.Companion.mass
 import java.lang.NumberFormatException
 import java.math.BigDecimal
 
 /**
  * A quantity is an amount of a given unit. The default value types are Int for integer
  * types and BigDecimal for decimal numbers. These can be overridden with `:L`, `:d`
- * and `:f`.
+ * and `:f`. The Quantity class provides compile-time safety for quantities of units.
  *
  * ```
  *   5cm
@@ -17,26 +19,28 @@ import java.math.BigDecimal
  *
  *   // Using Quantities in Kotlin expressions
  *
- *   println(Quantity("2cm") - Quantity("5mm"))
+ *   println(Quantity(2, Unit.cm) - Quantity(5, Unit.mm))
  *   value->  15mm
  * ````
- *
- * The Quantity class provides runtime safety for the mixing of incompatible units. It
- * does not provide compiled-time safety via generics as, for example,
- * [JSR 363: Units of Measurement API](https://jcp.org/en/jsr/detail?id=363) does. This
- * was an intentional design decision to keep the API small and simple. We may revisit
- * it in a future version. Note that it is trivial to convert a Ki Quantity and Unit to
- * their genericized JSR 363 counterparts.
  */
-class Quantity : Comparable<Quantity> {
+class Quantity<T: Unit> : Comparable<Quantity<T>> {
 
     val value: Number
-    val unit: Unit
+    val unit: T
 
-    constructor(value:Number, unit:Unit) {
+    constructor(value:Number, unit:T) {
         this.value = value
         this.unit = unit
     }
+
+    /**
+     *  A convenience method for creating Decimal value quantities from a String.
+     *
+     * @param value Number
+     * @param unit T
+     * @constructor
+     */
+    constructor(value:String, unit:T) : this(BigDecimal(value), unit)
 
     /**
      * Create a quantity from a string formatted as an integer or decimal number
@@ -68,10 +72,7 @@ class Quantity : Comparable<Quantity> {
             symbol = symbol.substring(0, numTypeIndex)
         }
 
-        val unit = Unit.getUnit(symbol)
-
-        if(unit == null)
-            throw NoSuchUnitException(symbol)
+        val unit = Unit.getUnit(symbol) as T
 
         val numText = text.substring(0, symbolIndex).replace("_", "")
 
@@ -90,7 +91,6 @@ class Quantity : Comparable<Quantity> {
     }
 
     override fun toString(): String {
-
         // Do nothing with Int or Decimal types. They are the defaults.
         val numType = when(value) {
             is Long -> ":L"
@@ -105,20 +105,20 @@ class Quantity : Comparable<Quantity> {
         return "$valueText$unit$numType"
     }
 
-    infix fun convertTo(otherUnit: Unit): Quantity {
+    infix fun convertTo(otherUnit: T): Quantity<T> {
         val multiplier = unit.factorTo(otherUnit)
         return when (value) {
-            is BigDecimal -> Quantity(value * multiplier, otherUnit)
+            is BigDecimal -> Quantity<T>(value * multiplier, otherUnit)
             is Int -> {
-                if (multiplier.isWhole) Quantity(value * multiplier.toInt(), otherUnit)
-                else Quantity(BigDecimal(value.toString()) * multiplier, otherUnit)
+                if (multiplier.whole) Quantity<T>(value * multiplier.toInt(), otherUnit)
+                else Quantity<T>(BigDecimal(value.toString()) * multiplier, otherUnit)
             }
             is Long -> {
-                if (multiplier.isWhole) Quantity(value * multiplier.toLong(), otherUnit)
-                else Quantity(BigDecimal(value.toString()) * multiplier, otherUnit)
+                if (multiplier.whole) Quantity<T>(value * multiplier.toLong(), otherUnit)
+                else Quantity<T>(BigDecimal(value.toString()) * multiplier, otherUnit)
             }
-            is Double -> Quantity(value * multiplier.toDouble(), otherUnit)
-            is Float -> Quantity(value * multiplier.toFloat(), otherUnit)
+            is Double -> Quantity<T>(value * multiplier.toDouble(), otherUnit)
+            is Float -> Quantity<T>(value * multiplier.toFloat(), otherUnit)
             else -> throw Error("Unknown Number type in Quantity: ${value.javaClass.simpleName}")
         }
     }
@@ -129,15 +129,15 @@ class Quantity : Comparable<Quantity> {
      * equivalent(Quantity)
      */
     override fun equals(other: Any?): Boolean {
-        if(other !is Quantity || other.unit!=unit || value::class != other.value::class)
+        if(other !is Quantity<*> || other.unit!=unit || value::class != other.value::class)
             return false
 
         return toString().equals(other.toString())
     }
 
-    fun equivalent(other: Quantity): Boolean {
-        return this convertTo this.unit.type.baseUnit ==
-                other convertTo other.unit.type.baseUnit
+    fun equivalent(other: Quantity<T>): Boolean {
+        return this convertTo this.unit.baseUnit as T ==
+                other convertTo other.unit.baseUnit as T
     }
 
     override fun hashCode(): Int {
@@ -146,9 +146,7 @@ class Quantity : Comparable<Quantity> {
         return result
     }
 
-    override fun compareTo(other: Quantity): Int {
-        if(other.unit.type != unit.type)
-            throw IncompatibleUnitsException(unit, other.unit)
+    override fun compareTo(other: Quantity<T>): Int {
 
         var quantity1 = this
         var quantity2 = other
@@ -157,7 +155,7 @@ class Quantity : Comparable<Quantity> {
             // no unit conversion needed
         } else if (this.unit.factor < other.unit.factor) {
             quantity2 = other convertTo this.unit
-        } else {
+        } else if (this.unit.factor > other.unit.factor) {
             quantity1 = this convertTo other.unit
         }
 
@@ -220,7 +218,7 @@ class Quantity : Comparable<Quantity> {
     // Operators ////
 
     // Int operand
-    operator fun plus(operand: Int): Quantity = when(value) {
+    operator fun plus(operand: Int): Quantity<T> = when(value) {
         // This looks odd, but the "is" check performs an implicit cast
         is Int -> Quantity(value + operand, unit)
         is BigDecimal -> Quantity(value + operand.toBigDecimal(), unit)
@@ -230,7 +228,7 @@ class Quantity : Comparable<Quantity> {
         else -> Quantity(value.toInt() + operand, unit) // Byte & Short
     }
 
-    operator fun minus(operand: Int): Quantity = when(value) {
+    operator fun minus(operand: Int): Quantity<T> = when(value) {
         // This looks odd, but the "is" check performs an implicit cast
         is Int -> Quantity(value - operand, unit)
         is BigDecimal -> Quantity(value - operand.toBigDecimal(), unit)
@@ -240,7 +238,7 @@ class Quantity : Comparable<Quantity> {
         else -> Quantity(value.toInt() - operand, unit)
     }
 
-    operator fun times(operand: Int): Quantity = when(value) {
+    operator fun times(operand: Int): Quantity<T> = when(value) {
         // This looks odd, but the "is" check performs an implicit cast
         is Int -> Quantity(value * operand, unit)
         is BigDecimal -> Quantity(value * operand.toBigDecimal(), unit)
@@ -250,7 +248,7 @@ class Quantity : Comparable<Quantity> {
         else -> Quantity(value.toInt() * operand, unit)
     }
 
-    operator fun div(operand: Int): Quantity = when(value) {
+    operator fun div(operand: Int): Quantity<T> = when(value) {
         // This looks odd, but the "is" check performs an implicit cast
         is Int -> Quantity(value / operand, unit)
         is BigDecimal -> Quantity(value / operand.toBigDecimal(), unit)
@@ -260,7 +258,7 @@ class Quantity : Comparable<Quantity> {
         else -> Quantity(value.toInt() / operand, unit)
     }
 
-    operator fun rem(operand: Int): Quantity = when(value) {
+    operator fun rem(operand: Int): Quantity<T> = when(value) {
         // This looks odd, but the "is" check performs an implicit cast
         is Int -> Quantity(value % operand, unit)
         is BigDecimal -> Quantity(value % operand.toBigDecimal(), unit)
@@ -271,7 +269,7 @@ class Quantity : Comparable<Quantity> {
     }
 
     // Long operand
-    operator fun plus(operand: Long): Quantity = when(value) {
+    operator fun plus(operand: Long): Quantity<T> = when(value) {
         // This looks odd, but the "is" check performs an implicit cast
         is Int -> Quantity(value + operand, unit)
         is BigDecimal -> Quantity(value + operand.toBigDecimal(), unit)
@@ -281,7 +279,7 @@ class Quantity : Comparable<Quantity> {
         else -> Quantity(value.toInt() + operand, unit) // Byte & Short
     }
 
-    operator fun minus(operand: Long): Quantity = when(value) {
+    operator fun minus(operand: Long): Quantity<T> = when(value) {
         // This looks odd, but the "is" check performs an implicit cast
         is Int -> Quantity(value - operand, unit)
         is BigDecimal -> Quantity(value - operand.toBigDecimal(), unit)
@@ -291,7 +289,7 @@ class Quantity : Comparable<Quantity> {
         else -> Quantity(value.toInt() - operand, unit)
     }
 
-    operator fun times(operand: Long): Quantity = when(value) {
+    operator fun times(operand: Long): Quantity<T> = when(value) {
         // This looks odd, but the "is" check performs an implicit cast
         is Int -> Quantity(value * operand, unit)
         is BigDecimal -> Quantity(value * operand.toBigDecimal(), unit)
@@ -301,7 +299,7 @@ class Quantity : Comparable<Quantity> {
         else -> Quantity(value.toInt() * operand, unit)
     }
 
-    operator fun div(operand: Long): Quantity = when(value) {
+    operator fun div(operand: Long): Quantity<T> = when(value) {
         // This looks odd, but the "is" check performs an implicit cast
         is Int -> Quantity(value / operand, unit)
         is BigDecimal -> Quantity(value / operand.toBigDecimal(), unit)
@@ -311,7 +309,7 @@ class Quantity : Comparable<Quantity> {
         else -> Quantity(value.toInt() / operand, unit)
     }
 
-    operator fun rem(operand: Long): Quantity = when(value) {
+    operator fun rem(operand: Long): Quantity<T> = when(value) {
         // This looks odd, but the "is" check performs an implicit cast
         is Int -> Quantity(value % operand, unit)
         is BigDecimal -> Quantity(value % operand.toBigDecimal(), unit)
@@ -322,7 +320,7 @@ class Quantity : Comparable<Quantity> {
     }
 
     // Float operand
-    operator fun plus(operand: Float): Quantity = when(value) {
+    operator fun plus(operand: Float): Quantity<T> = when(value) {
         // This looks odd, but the "is" check performs an implicit cast
         is Int -> Quantity(value + operand, unit)
         is BigDecimal -> Quantity(value + operand.toBigDecimal(), unit)
@@ -332,7 +330,7 @@ class Quantity : Comparable<Quantity> {
         else -> Quantity(value.toInt() + operand, unit) // Byte & Short
     }
 
-    operator fun minus(operand: Float): Quantity = when(value) {
+    operator fun minus(operand: Float): Quantity<T> = when(value) {
         // This looks odd, but the "is" check performs an implicit cast
         is Int -> Quantity(value - operand, unit)
         is BigDecimal -> Quantity(value - operand.toBigDecimal(), unit)
@@ -342,7 +340,7 @@ class Quantity : Comparable<Quantity> {
         else -> Quantity(value.toInt() - operand, unit)
     }
 
-    operator fun times(operand: Float): Quantity = when(value) {
+    operator fun times(operand: Float): Quantity<T> = when(value) {
         // This looks odd, but the "is" check performs an implicit cast
         is Int -> Quantity(value * operand, unit)
         is BigDecimal -> Quantity(value * operand.toBigDecimal(), unit)
@@ -352,7 +350,7 @@ class Quantity : Comparable<Quantity> {
         else -> Quantity(value.toInt() * operand, unit)
     }
 
-    operator fun div(operand: Float): Quantity = when(value) {
+    operator fun div(operand: Float): Quantity<T> = when(value) {
         // This looks odd, but the "is" check performs an implicit cast
         is Int -> Quantity(value / operand, unit)
         is BigDecimal -> Quantity(value / operand.toBigDecimal(), unit)
@@ -362,7 +360,7 @@ class Quantity : Comparable<Quantity> {
         else -> Quantity(value.toInt() / operand, unit)
     }
 
-    operator fun rem(operand: Float): Quantity = when(value) {
+    operator fun rem(operand: Float): Quantity<T> = when(value) {
         // This looks odd, but the "is" check performs an implicit cast
         is Int -> Quantity(value % operand, unit)
         is BigDecimal -> Quantity(value % operand.toBigDecimal(), unit)
@@ -373,7 +371,7 @@ class Quantity : Comparable<Quantity> {
     }
 
     // Double operand
-    operator fun plus(operand: Double): Quantity = when(value) {
+    operator fun plus(operand: Double): Quantity<T> = when(value) {
         // This looks odd, but the "is" check performs an implicit cast
         is Int -> Quantity(value + operand, unit)
         is BigDecimal -> Quantity(value + operand.toBigDecimal(), unit)
@@ -383,7 +381,7 @@ class Quantity : Comparable<Quantity> {
         else -> Quantity(value.toInt() + operand, unit) // Byte & Short
     }
 
-    operator fun minus(operand: Double): Quantity = when(value) {
+    operator fun minus(operand: Double): Quantity<T> = when(value) {
         // This looks odd, but the "is" check performs an implicit cast
         is Int -> Quantity(value - operand, unit)
         is BigDecimal -> Quantity(value - operand.toBigDecimal(), unit)
@@ -393,7 +391,7 @@ class Quantity : Comparable<Quantity> {
         else -> Quantity(value.toInt() - operand, unit)
     }
 
-    operator fun times(operand: Double): Quantity = when(value) {
+    operator fun times(operand: Double): Quantity<T> = when(value) {
         // This looks odd, but the "is" check performs an implicit cast
         is Int -> Quantity(value * operand, unit)
         is BigDecimal -> Quantity(value * operand.toBigDecimal(), unit)
@@ -403,7 +401,7 @@ class Quantity : Comparable<Quantity> {
         else -> Quantity(value.toInt() * operand, unit)
     }
 
-    operator fun div(operand: Double): Quantity = when(value) {
+    operator fun div(operand: Double): Quantity<T> = when(value) {
         // This looks odd, but the "is" check performs an implicit cast
         is Int -> Quantity(value / operand, unit)
         is BigDecimal -> Quantity(value / operand.toBigDecimal(), unit)
@@ -413,7 +411,7 @@ class Quantity : Comparable<Quantity> {
         else -> Quantity(value.toInt() / operand, unit)
     }
 
-    operator fun rem(operand: Double): Quantity = when(value) {
+    operator fun rem(operand: Double): Quantity<T> = when(value) {
         // This looks odd, but the "is" check performs an implicit cast
         is Int -> Quantity(value % operand, unit)
         is BigDecimal -> Quantity(value % operand.toBigDecimal(), unit)
@@ -424,7 +422,7 @@ class Quantity : Comparable<Quantity> {
     }
 
     // BigDecimal operand
-    operator fun plus(operand: BigDecimal): Quantity = when(value) {
+    operator fun plus(operand: BigDecimal): Quantity<T> = when(value) {
         // This looks odd, but the "is" check performs an implicit cast
         is Int -> Quantity(value.toBigDecimal() + operand, unit)
         is BigDecimal -> Quantity(value + operand, unit)
@@ -434,7 +432,7 @@ class Quantity : Comparable<Quantity> {
         else -> Quantity(value.toInt().toBigDecimal() + operand, unit) // Byte & Short
     }
 
-    operator fun minus(operand: BigDecimal): Quantity = when(value) {
+    operator fun minus(operand: BigDecimal): Quantity<T> = when(value) {
         // This looks odd, but the "is" check performs an implicit cast
         is Int -> Quantity(value.toBigDecimal() - operand, unit)
         is BigDecimal -> Quantity(value - operand, unit)
@@ -444,7 +442,7 @@ class Quantity : Comparable<Quantity> {
         else -> Quantity(value.toInt().toBigDecimal() - operand, unit)
     }
 
-    operator fun times(operand: BigDecimal): Quantity = when(value) {
+    operator fun times(operand: BigDecimal): Quantity<T> = when(value) {
         // This looks odd, but the "is" check performs an implicit cast
         is Int -> Quantity(value.toBigDecimal() * operand, unit)
         is BigDecimal -> Quantity(value * operand, unit)
@@ -454,7 +452,7 @@ class Quantity : Comparable<Quantity> {
         else -> Quantity(value.toInt().toBigDecimal() * operand, unit)
     }
 
-    operator fun div(operand: BigDecimal): Quantity = when(value) {
+    operator fun div(operand: BigDecimal): Quantity<T> = when(value) {
         // This looks odd, but the "is" check performs an implicit cast
         is Int -> Quantity(value.toBigDecimal() / operand, unit)
         is BigDecimal -> Quantity(value / operand, unit)
@@ -464,7 +462,7 @@ class Quantity : Comparable<Quantity> {
         else -> Quantity(value.toInt().toBigDecimal() / operand, unit)
     }
 
-    operator fun rem(operand: BigDecimal): Quantity = when(value) {
+    operator fun rem(operand: BigDecimal): Quantity<T> = when(value) {
         // This looks odd, but the "is" check performs an implicit cast
         is Int -> Quantity(value.toBigDecimal() % operand, unit)
         is BigDecimal -> Quantity(value % operand, unit)
@@ -481,9 +479,9 @@ class Quantity : Comparable<Quantity> {
      *
      * @throws IncompatibleUnitsException if the units don't have the same Unit.Type
      */
-    operator fun plus(operand: Quantity): Quantity {
-        if(operand.unit.type!= unit.type)
-            throw IncompatibleUnitsException(unit, operand.unit)
+    operator fun plus(operand: Quantity<T>): Quantity<T> {
+        //if(operand.unit.type!= unit.type)
+        //    throw IncompatibleUnitsException(unit, operand.unit)
 
         var quantity1 = this
         var quantity2 = operand
@@ -515,9 +513,9 @@ class Quantity : Comparable<Quantity> {
      *
      * @throws IncompatibleUnitsException if the units don't have the same Unit.Type
      */
-    operator fun minus(operand: Quantity): Quantity {
-        if(operand.unit.type!= unit.type)
-            throw IncompatibleUnitsException(unit, operand.unit)
+    operator fun minus(operand: Quantity<T>): Quantity<T> {
+        //if(operand.unit.type!= unit.type)
+        //    throw IncompatibleUnitsException(unit, operand.unit)
 
         var quantity1 = this
         var quantity2 = operand
@@ -540,5 +538,12 @@ class Quantity : Comparable<Quantity> {
             is Float -> quantity1 - value2
             else -> quantity1 - value2.toInt()
         }
+    }
+
+    companion object {
+        fun length(text:String) = Quantity<Length>(text)
+        fun area(text:String) = Quantity<Area>(text)
+        fun volume(text:String) = Quantity<Volume>(text)
+        fun mass(text:String) = Quantity<Mass>(text)
     }
 }
