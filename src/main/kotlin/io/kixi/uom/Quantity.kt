@@ -545,5 +545,49 @@ class Quantity<T: Unit> : Comparable<Quantity<T>> {
         fun area(text:String) = Quantity<Area>(text)
         fun volume(text:String) = Quantity<Volume>(text)
         fun mass(text:String) = Quantity<Mass>(text)
+
+        fun parse(text:String): Quantity<*> {
+            if(text.isBlank())
+                throw NumberFormatException("Quantity string cannot be empty.")
+
+            var symbolIndex = 0
+            for(i in 0..text.length) {
+                if ((text[i].isKiIDStart() && text[i]!='_') || text[i] == 'ℓ') {
+                    symbolIndex = i
+                    break
+                }
+            }
+
+            var symbol = text.substring(symbolIndex)
+            val numTypeIndex = symbol.indexOf(':')
+            var numTypeChar = '\u0000'
+
+            if(numTypeIndex!=-1) {
+                numTypeChar = symbol.last()
+                symbol = symbol.substring(0, numTypeIndex)
+            }
+
+            val unit = Unit.getUnit(symbol)
+
+            val numText = text.substring(0, symbolIndex).replace("_", "")
+
+            val numValue: Number = when(numTypeChar) {
+                'd','D' -> numText.toDouble()
+                'L' -> numText.toLong()
+                'f', 'F' -> numText.toFloat()
+                // Default (no num type specified)
+                '\u0000' -> if(numText.contains('.')) BigDecimal(numText) else
+                    numText.toInt()
+                else -> throw NumberFormatException("'$numTypeChar' is not a valid number type specifier in a Quantity")
+            }
+
+            return when(unit) {
+                is Length -> Quantity<Length>(numValue, unit)
+                is Area -> Quantity<Area>(numValue, unit)
+                is Volume -> Quantity<Volume>(numValue, unit)
+                is Mass -> Quantity<Mass>(numValue, unit)
+                else -> throw NoSuchUnitException(unit!!.symbol)
+            }
+        }
     }
 }

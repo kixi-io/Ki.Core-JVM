@@ -7,7 +7,8 @@ import java.util.TreeMap
 /**
  * An SI unit of measure
  */
-abstract class Unit(val symbol: String, val factor: BigDecimal, val unicode: String = symbol)  {
+abstract class Unit(val symbol: String, val factor: BigDecimal, val unicode: String = symbol)
+    : Comparable<Unit> {
 
     abstract val baseUnit: Unit
 
@@ -116,6 +117,18 @@ abstract class Unit(val symbol: String, val factor: BigDecimal, val unicode: Str
             text.last()=='2' -> text.dropLast(1) + '²'
             text.last()=='3' -> text.dropLast(1) + '³'
             else -> text
+        }
+    }
+
+    // TODO - This will compare incompatible Units. Make type safe!
+    override fun compareTo(other: Unit): Int {
+        val factor = this.factorTo(other)
+        return when {
+            factor == BigDecimal.ONE -> 0
+            factor > BigDecimal.ONE -> 1
+            factor < BigDecimal.ONE -> -1
+            // Can't happen
+            else -> throw Error("Internal error in Unit.compareTo(Unit)")
         }
     }
 }
