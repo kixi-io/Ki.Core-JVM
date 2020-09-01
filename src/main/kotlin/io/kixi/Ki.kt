@@ -266,7 +266,7 @@ class Ki {
             val encodedText = Base64.getEncoder().encodeToString(obj)
 
             if(encodedText.length>30) {
-                val lines = encodedText.chunked(50)
+                val lines = encodedText.trim().chunked(50)
                 val builder = StringBuilder(".blob(\n")
                 for(line in lines)
                     builder.append("\t$line\n")
