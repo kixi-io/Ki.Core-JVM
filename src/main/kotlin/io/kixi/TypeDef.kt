@@ -1,6 +1,7 @@
 package io.kixi
 
 import io.kixi.uom.Quantity
+import io.kixi.uom.Unit
 import java.math.BigDecimal
 import java.net.URL
 import java.time.LocalDate
