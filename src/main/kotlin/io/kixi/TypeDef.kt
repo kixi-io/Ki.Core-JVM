@@ -81,8 +81,7 @@ open class TypeDef(val type:Type, val nullable:Boolean) {
     open val generic: Boolean get() = false;
 }
 
-// TODO
-class QuantityDef(nullable:Boolean, val unit:Unit, val numType:Type) :
+class QuantityDef(nullable:Boolean, val unitType:KClass<*>, val numType:Type) :
     TypeDef(Type.Quantity, nullable) {
 
     val nullChar = if (nullable) "?" else ""
@@ -94,7 +93,7 @@ class QuantityDef(nullable:Boolean, val unit:Unit, val numType:Type) :
         else -> throw Error("Unkown type $numType")
     }
 
-    override fun toString() = "$type<${this.unit}$numTypeSuffix>$nullChar"
+    override fun toString() = "$type<${this.unitType.simpleName}$numTypeSuffix>$nullChar"
     override fun hashCode() = type.hashCode() or nullable.hashCode()
     override fun equals(other: Any?): Boolean {
         if (this === other) return true

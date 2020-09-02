@@ -1,5 +1,6 @@
 package io.kixi
 
+import io.kixi.uom.Length
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import io.kixi.uom.Unit
@@ -14,9 +15,9 @@ class KiTest {
         assertEquals("Decimal?", TypeDef.Decimal_N.toString())
     }
 
-    @Test fun testQuentityTypes() {
-        assertEquals("Quantity<cm>", QuantityDef(false, Unit.cm, Type.Decimal).toString())
-        assertEquals("Quantity<cm:L>?", QuantityDef(true, Unit.cm, Type.Long).toString())
+    @Test fun testQuantityTypes() {
+        assertEquals("Quantity<Length>", QuantityDef(false, Length::class, Type.Decimal).toString())
+        assertEquals("Quantity<Length:L>?", QuantityDef(true, Length::class, Type.Long).toString())
     }
 
     @Test fun testGenericStructureTypes() {

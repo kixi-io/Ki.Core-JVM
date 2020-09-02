@@ -7,7 +7,7 @@ import java.time.LocalDateTime
 import java.time.ZonedDateTime
 import java.time.Duration
 
-enum class Type(kclass: KClass<*>, supertype: Type?) {
+enum class Type(val kclass: KClass<*>, val supertype: Type?) {
     // Super types
     Any(kotlin.Any::class, null),
     Number(kotlin.Number::class, Any),
