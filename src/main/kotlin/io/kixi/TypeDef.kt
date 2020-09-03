@@ -9,6 +9,7 @@ import java.time.LocalDateTime
 import java.time.ZonedDateTime
 import java.time.Duration
 import kotlin.reflect.KClass
+import kotlin.reflect.full.isSubclassOf
 
 open class TypeDef(val type:Type, val nullable:Boolean) {
 
@@ -79,6 +80,13 @@ open class TypeDef(val type:Type, val nullable:Boolean) {
     }
 
     open val generic: Boolean get() = false;
+
+    open fun matches(value: Any?) = when {
+        value == null -> this == TypeDef.nil || nullable
+        !generic -> type.kclass == value!!::class ||
+                value!!::class.isSubclassOf(type.kclass)
+        else -> false
+    }
 }
 
 class QuantityDef(nullable:Boolean, val unitType:KClass<*>, val numType:Type) :
@@ -104,23 +112,68 @@ class QuantityDef(nullable:Boolean, val unitType:KClass<*>, val numType:Type) :
     }
 
     override val generic: Boolean get() = true;
+
+    override fun matches(value: Any?) : Boolean =
+        value is Quantity<*> &&
+        unitType == value.unit::class &&
+                (value.value::class == numType.kclass ||
+                        value.value::class.isSubclassOf(numType.kclass))
 }
 
 class RangeDef(nullable:Boolean, val valueDef: TypeDef) : TypeDef(Type.Range, nullable) {
     val nullChar = if (nullable) "?" else ""
     override fun toString() = "$type<$valueDef>$nullChar"
     override val generic: Boolean get() = true;
+
+    override fun matches(value: Any?) : Boolean =
+        value is Range<*> && (value.left::class == valueDef.type.kclass ||
+                value.left::class.isSubclassOf(valueDef.type.kclass))
 }
 
 class ListDef(nullable:Boolean, val valueDef: TypeDef) : TypeDef(Type.List, nullable) {
     val nullChar = if (nullable) "?" else ""
     override fun toString() = "$type<$valueDef>$nullChar"
     override val generic: Boolean get() = true;
+
+
+    override fun matches(list: Any?) : Boolean {
+        if(list == null && !nullable) return false
+
+        list as List<*>
+
+        // This seems odd but is necessary because we don't have runtime generics
+        if(list.isEmpty()) return true
+
+        for(e in list) {
+            if(!valueDef.matches(e))
+                return false
+        }
+
+        return true
+    }
 }
 
-class MapDef(nullable:Boolean, val keyTypeDef: TypeDef, val valueTypeDef: TypeDef) :
+class MapDef(nullable:Boolean, val keyDef: TypeDef, val valueDef: TypeDef) :
     TypeDef(Type.Map, nullable) {
     val nullChar = if (nullable) "?" else ""
-    override fun toString() = "$type<$keyTypeDef, $valueTypeDef>$nullChar"
+    override fun toString() = "$type<$keyDef, $valueDef>$nullChar"
     override val generic: Boolean get() = true;
+
+    override fun matches(map: Any?) : Boolean {
+        if(map == null && !nullable) return false
+
+        map as Map<*,*>
+
+        // This seems odd but is necessary because we don't have runtime generics
+        if(map.isEmpty()) return true
+
+        for(e in map) {
+            if(!keyDef.matches(e.key))
+                return false
+            if(!valueDef.matches(e.value))
+                return false
+        }
+
+        return true
+    }
 }
