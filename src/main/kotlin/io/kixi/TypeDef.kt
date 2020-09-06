@@ -111,7 +111,7 @@ class QuantityDef(nullable:Boolean, val unitType:KClass<*>, val numType:Type) :
         return other.type == type && other.nullable == nullable
     }
 
-    override val generic: Boolean get() = true;
+    override val generic: Boolean get() = true
 
     override fun matches(value: Any?) : Boolean =
         value is Quantity<*> &&
