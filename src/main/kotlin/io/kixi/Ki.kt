@@ -199,7 +199,7 @@ class Ki {
 
         @JvmStatic
         fun parseZonedDateTime(zdtText: String): ZonedDateTime {
-            val dashIdx = zdtText.indexOf('-')
+            val dashIdx = zdtText.lastIndexOf('-')
 
             // check for positive offset
             if (dashIdx == -1) {
