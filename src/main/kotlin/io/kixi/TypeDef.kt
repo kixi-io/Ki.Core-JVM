@@ -163,7 +163,7 @@ class QuantityDef(nullable:Boolean, val unitType:KClass<*>, val numType:Type) :
 class RangeDef(nullable:Boolean, val valueDef: TypeDef) : TypeDef(Type.Range, nullable) {
     val nullChar = if (nullable) "?" else ""
     override fun toString() = "$type<$valueDef>$nullChar"
-    override val generic: Boolean get() = true;
+    override val generic: Boolean get() = true
 
     override fun matches(value: Any?) : Boolean =
         value is Range<*> && (value.left::class == valueDef.type.kclass ||
@@ -173,7 +173,7 @@ class RangeDef(nullable:Boolean, val valueDef: TypeDef) : TypeDef(Type.Range, nu
 class ListDef(nullable:Boolean, val valueDef: TypeDef) : TypeDef(Type.List, nullable) {
     val nullChar = if (nullable) "?" else ""
     override fun toString() = "$type<$valueDef>$nullChar"
-    override val generic: Boolean get() = true;
+    override val generic: Boolean get() = true
 
 
     override fun matches(list: Any?) : Boolean {
