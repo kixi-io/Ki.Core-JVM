@@ -9,7 +9,6 @@ import java.time.LocalDateTime
 import java.time.ZonedDateTime
 import java.time.Duration
 import kotlin.reflect.KClass
-import kotlin.reflect.full.isSubclassOf
 
 open class TypeDef(val type:Type, val nullable:Boolean) {
 
@@ -77,14 +76,55 @@ open class TypeDef(val type:Type, val nullable:Boolean) {
 
         // nil
         val nil = TypeDef(Type.nil, true)
+
+        /**
+         * @param name String A KTS name such as String, Int or Bool. Nullable types
+         *   should be suffixed with _N (ex. String_N)
+         * @return TypeDef? A TypeDef for the KTS name or null if no type matches the
+         *   given name
+         */
+        fun forName(name: String) = when(name){
+            "null", "nil" -> nil
+            "String"-> String; "String_N"-> String_N
+            "Char" -> Char; "Char_N" -> Char_N
+            "Int" -> Int; "Int_N" -> Int_N
+            "Long" -> Long; "Long_N" -> Long_N
+            "Float" -> Float; "Float_N" -> Float_N
+            "Double" -> Double; "Double_N" -> Double
+            "Decimal" -> Decimal; "Decimal_N" -> Decimal_N
+            "Bool" -> Bool; "Bool_N" -> Bool_N
+            "URL" -> URL; "URL_N" -> URL_N
+            "Date" -> Date; "Date_N" -> Date_N
+            "LocalDateTime" -> LocalDateTime; "LocalDateTime_N" -> LocalDateTime_N
+            "ZonedDateTime" -> ZonedDateTime; "ZonedDateTime_N" -> ZonedDateTime_N
+            "Duration" -> Duration; "Duration_N" -> Duration_N
+            "Version" -> Version; "Version_N" -> Version_N
+            "Blob" -> Blob; "Blob_N" -> Blob_N
+
+            /* TODO: handle generic types,
+            is io.kixi.uom.Quantity<*> -> Quantity
+            is io.kixi.Range<*> -> Range
+            is kotlin.collections.List<*> -> List
+            is kotlin.collections.Map<*,*> -> Map
+            */
+
+            else -> null
+        }
     }
 
     open val generic: Boolean get() = false;
 
     open fun matches(value: Any?) = when {
         value == null -> this == TypeDef.nil || nullable
-        !generic -> type.kclass == value!!::class ||
-                value!!::class.isSubclassOf(type.kclass)
+        // Generic types override matches and do their own comparison
+        !generic -> {
+            val type = Type.typeOf(value)
+            if(type==null) {
+                false
+            } else {
+                this.type.isAssignableFrom(type)
+            }
+        }
         else -> false
     }
 }
@@ -117,7 +157,7 @@ class QuantityDef(nullable:Boolean, val unitType:KClass<*>, val numType:Type) :
         value is Quantity<*> &&
         unitType == value.unit::class &&
                 (value.value::class == numType.kclass ||
-                        value.value::class.isSubclassOf(numType.kclass))
+                        numType.isAssignableFrom(Type.typeOf(value.value)!!))
 }
 
 class RangeDef(nullable:Boolean, val valueDef: TypeDef) : TypeDef(Type.Range, nullable) {
@@ -127,7 +167,7 @@ class RangeDef(nullable:Boolean, val valueDef: TypeDef) : TypeDef(Type.Range, nu
 
     override fun matches(value: Any?) : Boolean =
         value is Range<*> && (value.left::class == valueDef.type.kclass ||
-                value.left::class.isSubclassOf(valueDef.type.kclass))
+                type.isAssignableFrom(Type.typeOf(value.left)!!))
 }
 
 class ListDef(nullable:Boolean, val valueDef: TypeDef) : TypeDef(Type.List, nullable) {
@@ -141,7 +181,7 @@ class ListDef(nullable:Boolean, val valueDef: TypeDef) : TypeDef(Type.List, null
 
         list as List<*>
 
-        // This seems odd but is necessary because we don't have runtime generics
+        // This seems wrong but is necessary because we don't have runtime generics
         if(list.isEmpty()) return true
 
         for(e in list) {

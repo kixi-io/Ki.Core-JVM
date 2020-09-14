@@ -1,11 +1,8 @@
 package io.kixi
 
 import java.math.BigDecimal
+import java.time.*
 import kotlin.reflect.KClass
-import java.time.LocalDate
-import java.time.LocalDateTime
-import java.time.ZonedDateTime
-import java.time.Duration
 
 enum class Type(val kclass: KClass<*>, val supertype: Type?) {
     // Super types
@@ -29,4 +26,35 @@ enum class Type(val kclass: KClass<*>, val supertype: Type?) {
 
     // nil
     nil(KClass::class,null);
+
+    fun isAssignableFrom(other:Type): Boolean {
+        return this == other || this == Any ||
+            other.supertype == this
+    }
+
+    companion object {
+        fun typeOf(obj:kotlin.Any?): Type? = when(obj) {
+            null -> nil
+            is kotlin.String -> String
+            is kotlin.Char -> Char
+            is kotlin.Int -> Int
+            is kotlin.Long -> Long
+            is kotlin.Float -> Float
+            is kotlin.Double -> Double
+            is BigDecimal -> Decimal
+            is kotlin.Boolean -> Bool
+            is java.net.URL -> URL
+            is java.time.LocalDate -> Date
+            is java.time.LocalDateTime -> LocalDateTime
+            is java.time.ZonedDateTime -> ZonedDateTime
+            is java.time.Duration -> Duration
+            is io.kixi.Version -> Version
+            is ByteArray -> Blob
+            is io.kixi.uom.Quantity<*> -> Quantity
+            is io.kixi.Range<*> -> Range
+            is kotlin.collections.List<*> -> List
+            is kotlin.collections.Map<*,*> -> Map
+            else -> null
+        }
+    }
 }

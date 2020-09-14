@@ -44,7 +44,6 @@ data class Range<T : Comparable<T>>(val left:T, val right:T,
 
     fun reversed() : Boolean = left.compareTo(right) > 0
 
-    // TODO - Make this work with open ranges
     fun contains(element:T) : Boolean {
         if(openLeft) {
             return when (type) {
