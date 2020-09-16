@@ -32,6 +32,8 @@ enum class Type(val kclass: KClass<*>, val supertype: Type?) {
             other.supertype == this
     }
 
+    fun isNumber(): Boolean = this == Number || (Number == supertype)
+
     companion object {
         fun typeOf(obj:kotlin.Any?): Type? = when(obj) {
             null -> nil
