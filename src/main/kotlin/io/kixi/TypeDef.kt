@@ -81,7 +81,7 @@ open class TypeDef(val type:Type, val nullable:Boolean) {
          * @param name String A KTS name such as String, Int or Bool. Nullable types
          *   should be suffixed with _N (ex. String_N)
          * @return TypeDef? A TypeDef for the KTS name or null if no type matches the
-         *   given name
+         *   given name or null if there is no match
          */
         fun forName(name: String) = when(name){
             "null", "nil" -> nil
@@ -92,6 +92,7 @@ open class TypeDef(val type:Type, val nullable:Boolean) {
             "Float" -> Float; "Float_N" -> Float_N
             "Double" -> Double; "Double_N" -> Double
             "Decimal" -> Decimal; "Decimal_N" -> Decimal_N
+            "Number" -> Number; "Number_N" -> Number_N
             "Bool" -> Bool; "Bool_N" -> Bool_N
             "URL" -> URL; "URL_N" -> URL_N
             "Date" -> Date; "Date_N" -> Date_N
@@ -100,7 +101,8 @@ open class TypeDef(val type:Type, val nullable:Boolean) {
             "Duration" -> Duration; "Duration_N" -> Duration_N
             "Version" -> Version; "Version_N" -> Version_N
             "Blob" -> Blob; "Blob_N" -> Blob_N
-
+            "Any" -> Any; "Any_N" -> Any_N
+            "nil" -> nil
             /* TODO: handle generic types,
             is io.kixi.uom.Quantity<*> -> Quantity
             is io.kixi.Range<*> -> Range
@@ -109,6 +111,32 @@ open class TypeDef(val type:Type, val nullable:Boolean) {
             */
 
             else -> null
+        }
+
+        fun inferListType(options: List<Any?>): TypeDef {
+            var widestType = Type.nil
+            var gotNil = false
+
+            for(opt in options) {
+                if(opt == null) {
+                    gotNil = true
+                    continue
+                }
+
+                val itemType = Type.typeOf(opt)!!
+
+                if(widestType == Type.nil) {
+                    widestType = itemType
+                } else if(widestType != itemType && !widestType.isAssignableFrom(itemType)) {
+                    if(widestType.isNumber() && itemType.isNumber()) {
+                        widestType = Type.Number
+                    } else {
+                        widestType = Type.Any
+                    }
+                }
+            }
+
+            return TypeDef(widestType, gotNil)
         }
     }
 
@@ -175,9 +203,9 @@ class ListDef(nullable:Boolean, val valueDef: TypeDef) : TypeDef(Type.List, null
     override fun toString() = "$type<$valueDef>$nullChar"
     override val generic: Boolean get() = true
 
-
     override fun matches(list: Any?) : Boolean {
         if(list == null && !nullable) return false
+        if(list !is List<*>) return false
 
         list as List<*>
 
@@ -201,6 +229,7 @@ class MapDef(nullable:Boolean, val keyDef: TypeDef, val valueDef: TypeDef) :
 
     override fun matches(map: Any?) : Boolean {
         if(map == null && !nullable) return false
+        if(map !is Map<*,*>) return false
 
         map as Map<*,*>
 

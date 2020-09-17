@@ -44,7 +44,7 @@ data class Range<T : Comparable<T>>(val left:T, val right:T,
 
     fun reversed() : Boolean = left.compareTo(right) > 0
 
-    fun contains(element:T) : Boolean {
+    operator fun contains(element:T) : Boolean {
         if(openLeft) {
             return when (type) {
                 Type.Inclusive -> element <= right
@@ -69,4 +69,3 @@ data class Range<T : Comparable<T>>(val left:T, val right:T,
         }
     }
 }
-
