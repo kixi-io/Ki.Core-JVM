@@ -7,12 +7,15 @@ import java.util.TreeMap
 /**
  * An SI unit of measure
  */
+@Suppress("unused")
 abstract class Unit(val symbol: String, val factor: BigDecimal, val unicode: String = symbol)
     : Comparable<Unit> {
 
     abstract val baseUnit: Unit
 
     val description get() = "$symbol ${Length::class.java.simpleName} ${factor.toPlainString()}"
+
+    val axis get() = this::class.simpleName
 
     override fun toString(): String = symbol
     override fun equals(other: Any?): Boolean = other != null && other is Unit &&
@@ -55,10 +58,28 @@ abstract class Unit(val symbol: String, val factor: BigDecimal, val unicode: Str
         val g = addUnit(Mass("g", BigDecimal("1")))
         val kg = addUnit(Mass("kg", BigDecimal("1000")))
 
-        // Time ////
-        // This is handled by the Duration type. TODO: bridge SI time units w/ Durations
+        // Temperature ////
+        val K = addUnit(Temperature("K", BigDecimal("1")))
 
-        // TODO: Base temperature, substance amount, current & luminosity units
+        /**
+         * Celsius (°C) has the same magnitude as Kelvin, just a different null point
+         *
+         * dC is also accepted when parsing, but °C is always used for output
+         */
+        val dC = addUnit(Temperature("°C", BigDecimal("1")))
+
+        // Substance Amount
+        val mol = addUnit(SubstanceAmount("mol", BigDecimal("1")))
+
+        // Electric Current
+        val A = addUnit(Current("A", BigDecimal("1")))
+
+        // Luminosity
+        val cd = addUnit(Current("cd", BigDecimal("1")))
+
+        // Time ////
+        // This is handled by the Duration type.
+        // TODO: bridge SI time units w/ Durations
 
         /* Common Derived Units -------- */
 
@@ -81,13 +102,31 @@ abstract class Unit(val symbol: String, val factor: BigDecimal, val unicode: Str
          * always used for output.
          */
         val L = addUnit(Volume("ℓ", BigDecimal(".001")))
+
         /**
          * mL is also accepted when parsing, but ℓ is always used for output to be consistent with liter (ℓ)
          */
         val mL = addUnit(Volume("mℓ", BigDecimal(".000001")))
 
-        // TODO: Derived density, speed, acceleration, force, pressure, energy, power, charge, potential delta,
-        //   resistance, conductance and capacitance
+        // Speed / Velocity ////
+
+        /**
+         * KTS breaks with the SI standard here for practical purposes. kph is our base speed unit. It is far more
+         * common and useful for most purposes than mps. We define both.
+         */
+        val kph = addUnit(Speed("kph", BigDecimal("1")))
+
+        val mps = addUnit(Speed("mps", BigDecimal("0.277778")))
+
+        // Density (Volumetric Mass) ////
+
+        /**
+         * kgpm3 is also accepted when parsing, but kgpm³ is always used for output
+         */
+        val kgpm3 = addUnit(Volume("kgpm³", BigDecimal("1")))
+
+        // TODO: Derived acceleration, force, pressure, energy, power, charge, potential delta, resistance, conductance
+        //     and capacitance
 
         @JvmStatic
         fun getUnit(symbol:String) : Unit? {
@@ -95,6 +134,7 @@ abstract class Unit(val symbol: String, val factor: BigDecimal, val unicode: Str
                 val key = when(symbol) {
                     "LT" -> "ℓ"
                     "mL" -> "mℓ"
+                    "dC" -> "°C"
                     else -> convertExponent(symbol)
                 }
 
@@ -157,18 +197,51 @@ class Mass(symbol: String, factor: BigDecimal, unicode: String = symbol) :
     override val baseUnit get() = getUnit("kg")!! as Mass
 }
 
-// TODO: Add
+class Temperature(symbol: String, factor: BigDecimal, unicode: String = symbol) :
+    Unit(symbol, factor, unicode= symbol) {
+
+    override val baseUnit get() = getUnit("K")!! as Temperature
+}
+
+class Speed(symbol: String, factor: BigDecimal, unicode: String = symbol) :
+    Unit(symbol, factor, unicode= symbol) {
+
+    override val baseUnit get() = getUnit("kph")!! as Speed
+}
+
+class SubstanceAmount(symbol: String, factor: BigDecimal, unicode: String = symbol) :
+    Unit(symbol, factor, unicode= symbol) {
+
+    override val baseUnit get() = getUnit("mol")!! as SubstanceAmount
+}
+
+class Current(symbol: String, factor: BigDecimal, unicode: String = symbol) :
+    Unit(symbol, factor, unicode= symbol) {
+
+    override val baseUnit get() = getUnit("A")!! as Current
+}
+
+class Luminosity(symbol: String, factor: BigDecimal, unicode: String = symbol) :
+    Unit(symbol, factor, unicode= symbol) {
+
+    override val baseUnit get() = getUnit("cd")!! as Current
+}
+
+/**
+ * Volumetric mass density
+ */
+class Density(symbol: String, factor: BigDecimal, unicode: String = symbol) :
+    Unit(symbol, factor, unicode= symbol) {
+
+    override val baseUnit get() = getUnit("kgpm3")!! as Density
+}
+
+// TODO: Add these unit axes
 /*
 // Base Types
-TIME("s"),
-TEMPERATURE("K"),
-SUBSTANCE_AMOUNT("mol"),
-CURRENT("A"), // electric current
-LUMINOSITY("cd"), // luminous intensity
+TIME("s") // TODO: Bridge with Duration
 
 // Common Derived Unit Types
-DENSITY("kgpm3"), // volumetric mass density
-SPEED("mps"),
 ACCELERATION("mps2"),
 FORCE("N"),
 PRESSURE("Pa"),

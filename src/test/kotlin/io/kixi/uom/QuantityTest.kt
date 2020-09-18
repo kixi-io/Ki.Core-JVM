@@ -11,7 +11,7 @@ import java.math.BigDecimal
 class QuantityTest {
 
     @Test fun testParsing() {
-        assertEquals(Q(5, Unit.cm), length("5cm"))
+        assertEquals(Q(5, Unit.cm), length("5cm:i"))
         assertEquals(Q(BigDecimal("8.2"), Unit.kg), mass("8.2kg"))
         assertEquals(Q(BigDecimal("-43.2"), Unit.kg), mass("-43.2kg"))
         assertEquals("8.3kg", Q(BigDecimal("8.3"), Unit.kg).toString())
@@ -27,7 +27,7 @@ class QuantityTest {
     }
 
     @Test fun testConversion() {
-        assertEquals(Q(5, Unit.cm) convertTo Unit.mm, length("50mm"))
+        assertEquals(Q(5, Unit.cm) convertTo Unit.mm, length("50mm:i"))
         assertEquals(Q(500, Unit.m) convertTo Unit.km, length(".5km"))
     }
 
@@ -37,7 +37,7 @@ class QuantityTest {
 
         // Note: Quantities with fractional amounts default to BigDecimal
         assertEquals(area("5.5cm2"), area("5cm2") + BigDecimal(".5"))
-        assertEquals(area("5.5cm2:d"), area("5cm2") + .5)
+        assertEquals(area("5.5cm2"), area("5cm2") + .5)
     }
 
     @Test fun quantityOperandOperations() {

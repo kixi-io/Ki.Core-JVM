@@ -1,7 +1,6 @@
 package io.kixi
 
 import java.math.BigDecimal
-import java.time.*
 import kotlin.reflect.KClass
 
 enum class Type(val kclass: KClass<*>, val supertype: Type?) {
@@ -12,7 +11,7 @@ enum class Type(val kclass: KClass<*>, val supertype: Type?) {
     // Base types
     String(kotlin.String::class, Any), Char(kotlin.Char::class, Any),
     Int(kotlin.Int::class, Number), Long(kotlin.Long::class, Number),
-    Float(kotlin.Float::class, Number), Double(kotlin.Double::class, Number), Decimal(BigDecimal::class, Number),
+    Float(kotlin.Float::class, Number), Double(kotlin.Double::class, Number), Dec(BigDecimal::class, Number),
     Bool(kotlin.Boolean::class, Any),
     URL(java.net.URL::class, Any),
     Date(java.time.LocalDate::class, Any), LocalDateTime(java.time.LocalDateTime::class, Any),
@@ -43,7 +42,7 @@ enum class Type(val kclass: KClass<*>, val supertype: Type?) {
             is kotlin.Long -> Long
             is kotlin.Float -> Float
             is kotlin.Double -> Double
-            is BigDecimal -> Decimal
+            is BigDecimal -> Dec
             is kotlin.Boolean -> Bool
             is java.net.URL -> URL
             is java.time.LocalDate -> Date

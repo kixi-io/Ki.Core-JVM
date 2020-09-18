@@ -1,13 +1,6 @@
 package io.kixi
 
-import io.kixi.uom.Quantity
-import io.kixi.uom.Unit
-import java.math.BigDecimal
-import java.net.URL
-import java.time.LocalDate
-import java.time.LocalDateTime
-import java.time.ZonedDateTime
-import java.time.Duration
+import io.kixi.uom.*
 import kotlin.reflect.KClass
 
 open class TypeDef(val type:Type, val nullable:Boolean) {
@@ -47,8 +40,8 @@ open class TypeDef(val type:Type, val nullable:Boolean) {
         val Double = TypeDef(Type.Double, false)
         val Double_N = TypeDef(Type.Double, true)
 
-        val Decimal = TypeDef(Type.Decimal, false)
-        val Decimal_N = TypeDef(Type.Decimal, true)
+        val Dec = TypeDef(Type.Dec, false)
+        val Dec_N = TypeDef(Type.Dec, true)
 
         val Bool = TypeDef(Type.Bool, false)
         val Bool_N = TypeDef(Type.Bool, true)
@@ -91,7 +84,7 @@ open class TypeDef(val type:Type, val nullable:Boolean) {
             "Long" -> Long; "Long_N" -> Long_N
             "Float" -> Float; "Float_N" -> Float_N
             "Double" -> Double; "Double_N" -> Double
-            "Decimal" -> Decimal; "Decimal_N" -> Decimal_N
+            "Dec" -> Dec; "Dec_N" -> Dec_N
             "Number" -> Number; "Number_N" -> Number_N
             "Bool" -> Bool; "Bool_N" -> Bool_N
             "URL" -> URL; "URL_N" -> URL_N
@@ -103,7 +96,8 @@ open class TypeDef(val type:Type, val nullable:Boolean) {
             "Blob" -> Blob; "Blob_N" -> Blob_N
             "Any" -> Any; "Any_N" -> Any_N
             "nil" -> nil
-            /* TODO: handle generic types,
+
+            /*
             is io.kixi.uom.Quantity<*> -> Quantity
             is io.kixi.Range<*> -> Range
             is kotlin.collections.List<*> -> List
@@ -162,7 +156,7 @@ class QuantityDef(nullable:Boolean, val unitType:KClass<*>, val numType:Type) :
 
     val nullChar = if (nullable) "?" else ""
     val numTypeSuffix = when(numType) {
-        Type.Decimal, Type.Int -> ""
+        Type.Dec, Type.Int -> ""
         Type.Double -> ":d"
         Type.Long -> ":L"
         Type.Float -> ":f"
@@ -230,8 +224,6 @@ class MapDef(nullable:Boolean, val keyDef: TypeDef, val valueDef: TypeDef) :
     override fun matches(map: Any?) : Boolean {
         if(map == null && !nullable) return false
         if(map !is Map<*,*>) return false
-
-        map as Map<*,*>
 
         // This seems odd but is necessary because we don't have runtime generics
         if(map.isEmpty()) return true

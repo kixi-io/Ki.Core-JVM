@@ -3,7 +3,6 @@ package io.kixi
 import io.kixi.uom.Length
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
-import io.kixi.uom.Unit
 
 /**
  * Tests for convenience methods in the Ki class
@@ -11,12 +10,12 @@ import io.kixi.uom.Unit
 class KiTest {
 
     @Test fun testSimpleTypes() {
-        assertEquals("Decimal", TypeDef.Decimal.toString())
-        assertEquals("Decimal?", TypeDef.Decimal_N.toString())
+        assertEquals("Dec", TypeDef.Dec.toString())
+        assertEquals("Dec?", TypeDef.Dec_N.toString())
     }
 
     @Test fun testQuantityTypes() {
-        assertEquals("Quantity<Length>", QuantityDef(false, Length::class, Type.Decimal).toString())
+        assertEquals("Quantity<Length>", QuantityDef(false, Length::class, Type.Dec).toString())
         assertEquals("Quantity<Length:L>?", QuantityDef(true, Length::class, Type.Long).toString())
     }
 

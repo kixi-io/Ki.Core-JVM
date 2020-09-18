@@ -30,13 +30,13 @@ internal class TypeDefTest {
     }
 
     @Test fun testQuantities() {
-        assertTrue(QuantityDef(true, Length::class, Type.Decimal).matches(
+        assertTrue(QuantityDef(true, Length::class, Type.Dec).matches(
             Quantity("5.0", Unit.cm)
         ))
-        assertFalse(QuantityDef(true, Length::class, Type.Decimal).matches(
+        assertFalse(QuantityDef(true, Length::class, Type.Dec).matches(
             Quantity(5, Unit.cm)
         ))
-        assertFalse(QuantityDef(true, Length::class, Type.Decimal).matches(
+        assertFalse(QuantityDef(true, Length::class, Type.Dec).matches(
             Quantity("5.0", Unit.g)
         ))
     }
