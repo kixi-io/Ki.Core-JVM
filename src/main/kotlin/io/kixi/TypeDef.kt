@@ -95,14 +95,6 @@ open class TypeDef(val type:Type, val nullable:Boolean) {
             "Version" -> Version; "Version_N" -> Version_N
             "Blob" -> Blob; "Blob_N" -> Blob_N
             "Any" -> Any; "Any_N" -> Any_N
-            "nil" -> nil
-
-            /*
-            is io.kixi.uom.Quantity<*> -> Quantity
-            is io.kixi.Range<*> -> Range
-            is kotlin.collections.List<*> -> List
-            is kotlin.collections.Map<*,*> -> Map
-            */
 
             else -> null
         }
@@ -204,16 +196,14 @@ class ListDef(nullable:Boolean, val valueDef: TypeDef) : TypeDef(Type.List, null
     override fun toString() = "$type<$valueDef>$nullChar"
     override val generic: Boolean get() = true
 
-    override fun matches(list: Any?) : Boolean {
-        if(list == null && !nullable) return false
-        if(list !is List<*>) return false
-
-        list as List<*>
+    override fun matches(value: Any?) : Boolean {
+        if(value == null && !nullable) return false
+        if(value !is List<*>) return false
 
         // This seems wrong but is necessary because we don't have runtime generics
-        if(list.isEmpty()) return true
+        if(value.isEmpty()) return true
 
-        for(e in list) {
+        for(e in value) {
             if(!valueDef.matches(e))
                 return false
         }
@@ -228,14 +218,14 @@ class MapDef(nullable:Boolean, val keyDef: TypeDef, val valueDef: TypeDef) :
     override fun toString() = "$type<$keyDef, $valueDef>$nullChar"
     override val generic: Boolean get() = true;
 
-    override fun matches(map: Any?) : Boolean {
-        if(map == null && !nullable) return false
-        if(map !is Map<*,*>) return false
+    override fun matches(value: Any?) : Boolean {
+        if(value == null && !nullable) return false
+        if(value !is Map<*,*>) return false
 
         // This seems odd but is necessary because we don't have runtime generics
-        if(map.isEmpty()) return true
+        if(value.isEmpty()) return true
 
-        for(e in map) {
+        for(e in value) {
             if(!keyDef.matches(e.key))
                 return false
             if(!valueDef.matches(e.value))
