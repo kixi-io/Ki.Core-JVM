@@ -175,11 +175,15 @@ class QuantityDef(nullable:Boolean, val unitType:KClass<*>, val numType:Type) :
 
     override val generic: Boolean get() = true
 
-    override fun matches(value: Any?) : Boolean =
-        value is Quantity<*> &&
-        unitType == value.unit::class &&
-                (value.value::class == numType.kclass ||
-                        numType.isAssignableFrom(Type.typeOf(value.value)!!))
+    override fun matches(value: Any?) : Boolean {
+        if(value == null)
+            return nullable
+        else
+            return value is Quantity<*> &&
+                    unitType == value.unit::class &&
+                    (value.value::class == numType.kclass ||
+                            numType.isAssignableFrom(Type.typeOf(value.value)!!))
+    }
 }
 
 class RangeDef(nullable:Boolean, val valueDef: TypeDef) : TypeDef(Type.Range, nullable) {
