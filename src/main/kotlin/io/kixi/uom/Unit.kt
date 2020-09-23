@@ -123,7 +123,7 @@ abstract class Unit(val symbol: String, val factor: BigDecimal, val unicode: Str
         /**
          * kgpm3 is also accepted when parsing, but kgpm³ is always used for output
          */
-        val kgpm3 = addUnit(Volume("kgpm³", BigDecimal("1")))
+        val kgpm3 = addUnit(Density("kgpm³", BigDecimal("1")))
 
         // TODO: Derived acceleration, force, pressure, energy, power, charge, potential delta, resistance, conductance
         //     and capacitance
