@@ -576,6 +576,8 @@ class Quantity<T: Unit> : Comparable<Quantity<T>> {
             }
 
             val unit = Unit.getUnit(symbol)
+            if(unit==null)
+                throw NoSuchUnitException("Unit $symbol in $text does not exist.")
 
             val numText = text.substring(0, symbolIndex).replace("_", "")
 
@@ -605,7 +607,7 @@ class Quantity<T: Unit> : Comparable<Quantity<T>> {
                 is Speed -> Quantity<Speed>(numValue, unit)
                 is Density -> Quantity<Density>(numValue, unit)
 
-                else -> throw NoSuchUnitException(unit!!.symbol)
+                else -> throw NoSuchUnitException(unit.symbol)
             }
         }
     }

@@ -169,3 +169,5 @@ fun CharSequence.isKiIdentifier(): Boolean {
 
     return true
 }
+
+val LINE_SEP: String = System.lineSeparator()!!

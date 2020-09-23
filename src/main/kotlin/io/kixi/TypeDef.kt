@@ -187,9 +187,12 @@ class RangeDef(nullable:Boolean, val valueDef: TypeDef) : TypeDef(Type.Range, nu
     override fun toString() = "$type<$valueDef>$nullChar"
     override val generic: Boolean get() = true
 
-    override fun matches(value: Any?) : Boolean =
-        value is Range<*> && (value.left::class == valueDef.type.kclass ||
+    override fun matches(value: Any?) : Boolean {
+        if(value == null)
+            return nullable
+        else return value is Range<*> && (value.left::class == valueDef.type.kclass ||
                 type.isAssignableFrom(Type.typeOf(value.left)!!))
+    }
 }
 
 class ListDef(nullable:Boolean, val valueDef: TypeDef) : TypeDef(Type.List, nullable) {
