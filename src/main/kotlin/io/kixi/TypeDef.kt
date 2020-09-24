@@ -99,7 +99,7 @@ open class TypeDef(val type:Type, val nullable:Boolean) {
             else -> null
         }
 
-        fun inferListType(options: List<Any?>): TypeDef {
+        fun inferCollectionType(options: Collection<Any?>): TypeDef {
             var widestType = Type.nil
             var gotNil = false
 
