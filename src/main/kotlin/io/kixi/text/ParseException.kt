@@ -10,6 +10,7 @@ package io.kixi.text
  *      beginning of the text (across lines.)
  * @property message String?
  */
+@Suppress("unused")
 open class ParseException : RuntimeException {
 
     var line = -1
@@ -31,17 +32,20 @@ open class ParseException : RuntimeException {
         this.index = index
     }
 
-    /**
-     * Used for parsing one line strings. The line number is disregarded.
-     *
-     * @param message String
-     * @param index Int Index at which the error occurs
-     * @param cause Throwable?
-     * @constructor
-     */
-    constructor(message:String, index:Int = -1, cause:Throwable? = null) : super(message, cause) {
-        this.line = -1
-        this.index = index
+    companion object {
+
+        /**
+         * Used for parsing one line strings. The line number is disregarded.
+         *
+         * @param message String
+         * @param index Int Index at which the error occurs
+         * @param cause Throwable?
+         * @constructor
+         */
+        @JvmOverloads
+        fun line(message:String, index:Int = -1, cause:Throwable? = null): ParseException {
+            return ParseException(message, -1, index, cause)
+        }
     }
 
     override val message: String get() {

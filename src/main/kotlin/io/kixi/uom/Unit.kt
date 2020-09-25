@@ -1,3 +1,5 @@
+@file:Suppress("unused")
+
 package io.kixi.uom
 
 import java.math.BigDecimal
@@ -173,54 +175,63 @@ abstract class Unit(val symbol: String, val factor: BigDecimal, val unicode: Str
     }
 }
 
+@Suppress("unused", "UNUSED_PARAMETER")
 class Length(symbol: String, factor: BigDecimal, unicode: String = symbol) :
     Unit(symbol, factor, unicode= symbol) {
 
     override val baseUnit get() = getUnit("m")!! as Length
 }
 
+@Suppress("unused", "UNUSED_PARAMETER")
 class Area(symbol: String, factor: BigDecimal, unicode: String = symbol) :
     Unit(symbol, factor, unicode= symbol) {
 
     override val baseUnit get() = getUnit("m2")!! as Area
 }
 
+@Suppress("unused", "UNUSED_PARAMETER")
 class Volume(symbol: String, factor: BigDecimal, unicode: String = symbol) :
     Unit(symbol, factor, unicode= symbol) {
 
     override val baseUnit get() = getUnit("m3")!! as Volume
 }
 
+@Suppress("unused", "UNUSED_PARAMETER")
 class Mass(symbol: String, factor: BigDecimal, unicode: String = symbol) :
     Unit(symbol, factor, unicode= symbol) {
 
     override val baseUnit get() = getUnit("kg")!! as Mass
 }
 
+@Suppress("unused", "UNUSED_PARAMETER")
 class Temperature(symbol: String, factor: BigDecimal, unicode: String = symbol) :
     Unit(symbol, factor, unicode= symbol) {
 
     override val baseUnit get() = getUnit("K")!! as Temperature
 }
 
+@Suppress("unused", "UNUSED_PARAMETER")
 class Speed(symbol: String, factor: BigDecimal, unicode: String = symbol) :
     Unit(symbol, factor, unicode= symbol) {
 
     override val baseUnit get() = getUnit("kph")!! as Speed
 }
 
+@Suppress("unused", "UNUSED_PARAMETER")
 class SubstanceAmount(symbol: String, factor: BigDecimal, unicode: String = symbol) :
     Unit(symbol, factor, unicode= symbol) {
 
     override val baseUnit get() = getUnit("mol")!! as SubstanceAmount
 }
 
+@Suppress("unused", "UNUSED_PARAMETER")
 class Current(symbol: String, factor: BigDecimal, unicode: String = symbol) :
     Unit(symbol, factor, unicode= symbol) {
 
     override val baseUnit get() = getUnit("A")!! as Current
 }
 
+@Suppress("unused", "UNUSED_PARAMETER")
 class Luminosity(symbol: String, factor: BigDecimal, unicode: String = symbol) :
     Unit(symbol, factor, unicode= symbol) {
 
@@ -230,6 +241,7 @@ class Luminosity(symbol: String, factor: BigDecimal, unicode: String = symbol) :
 /**
  * Volumetric mass density
  */
+@Suppress("unused", "UNUSED_PARAMETER")
 class Density(symbol: String, factor: BigDecimal, unicode: String = symbol) :
     Unit(symbol, factor, unicode= symbol) {
 

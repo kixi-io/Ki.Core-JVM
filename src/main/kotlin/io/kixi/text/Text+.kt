@@ -1,19 +1,17 @@
+@file:Suppress("unused")
+
 package io.kixi.text
 
-import io.kixi.log
 import java.util.*
 
 /**
  * A set of convenience methods for CharSequences
  */
-
 fun CharSequence.toList(
     delimiters: String = " \t",
     trim: Boolean = true,
     list: MutableList<String> = ArrayList<String>()
-):
-        List<String> {
-
+): List<String> {
     val st = StringTokenizer(this.toString(), delimiters)
     while (st.hasMoreTokens())
         list+=(if (trim) st.nextToken().trim() else st.nextToken())
@@ -30,6 +28,7 @@ fun CharSequence.countDigits(): Int {
     return i
 }
 
+@Suppress("unused")
 fun CharSequence.countAlpha(): Int {
     var i = 0
     for(c in this) {
@@ -98,7 +97,7 @@ fun String.resolveEscapes(quoteChar: Char? = '"'): String {
 
     outer@ while(index<length) {
 
-        var c = this[index]
+        val c = this[index]
 
         if(escape) {
             when(c) {
@@ -112,13 +111,13 @@ fun String.resolveEscapes(quoteChar: Char? = '"'): String {
                             digits. Got ${this.substring(index)}"""
                         )
                     index++
-                    var hexDigits = this.substring(index, index+4)
+                    val hexDigits = this.substring(index, index+4)
 
                     try {
                         val intValue = hexDigits.toInt(16)
                         sb.append(intValue.toChar())
                     } catch(nfe:NumberFormatException) {
-                        throw ParseException("Invalid char in unicode escape.", index, nfe)
+                        throw ParseException.line("Invalid char in unicode escape.", index, nfe)
                     }
                     index+=4
                     escape = false
@@ -162,7 +161,7 @@ fun Char.isKiIDChar(): Boolean = this.isKiIDStart() || this.isDigit() ||
         this.isSurrogate()
 
 fun CharSequence.isKiIdentifier(): Boolean {
-    if (this.isEmpty() || !this[0].isKiIDStart() || this.equals("_"))
+    if (this.isEmpty() || !this[0].isKiIDStart() || this == "_")
         return false
 
     for(c in this) if(!c.isKiIDChar()) return false

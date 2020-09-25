@@ -20,6 +20,7 @@ import java.math.BigDecimal as Dec
  *   value->  15mm
  * ````
  */
+@Suppress("UNCHECKED_CAST", "unused")
 class Quantity<T: Unit> : Comparable<Quantity<T>> {
 
     val value: Number

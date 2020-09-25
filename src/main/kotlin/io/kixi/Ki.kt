@@ -2,7 +2,6 @@ package io.kixi
 
 import io.kixi.text.ParseException
 import io.kixi.text.escape
-import io.kixi.uom.Unit
 import java.lang.Math.abs
 import java.math.BigDecimal
 import java.time.*
@@ -16,6 +15,7 @@ import java.util.*
  * As set of constants, enums and convenience methods for working with the Ki Type system and related
  * core functionality (formatting and parsing KTS literals, etc.)
  */
+@Suppress("UNCHECKED_CAST", "unused")
 class Ki {
 
     companion object {
@@ -93,14 +93,14 @@ class Ki {
             .append(LOCAL_DATE_TIME)
             // .appendLiteral("'-'")
             .appendOffsetId()
-            .toFormatter()
+            .toFormatter()!!
 
         @JvmField
         val ZONED_DATE_TIME_OFFSET_PARSER = DateTimeFormatterBuilder()
             .append(LOCAL_DATE_TIME_PARSER)
             // .appendLiteral("'-'")
             .appendOffsetId()
-            .toFormatter()
+            .toFormatter()!!
 
         /**
          * Format an object using its Ki canonical form. For example, a String will be
