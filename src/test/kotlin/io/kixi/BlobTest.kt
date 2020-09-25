@@ -16,5 +16,4 @@ class BlobTest {
         assertEquals("Hello",
             String(Ki.parseBlob(".blob(SGVsbG8=)")))
     }
-
 }
