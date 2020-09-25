@@ -1,13 +1,12 @@
 package io.kixi
 
-import io.kixi.Range
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 
 class RangeTest {
 
-    @Test fun testContainsInclusive() {
+    @Test fun containsInclusive() {
         // Closed
         var r = Range(1, 10, Range.Type.Inclusive, false, false)
         assertFalse(-1 in r)
@@ -49,7 +48,7 @@ class RangeTest {
         assertTrue(r.contains(Int.MAX_VALUE))
     }
 
-    @Test fun testContainsExclusive() {
+    @Test fun containsExclusive() {
         // Exclusive (left & right)
         var r = Range(1, 10, Range.Type.Exclusive, false, false)
         assertFalse(r.contains(1))

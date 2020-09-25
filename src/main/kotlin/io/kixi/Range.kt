@@ -3,7 +3,8 @@ package io.kixi
 /**
  * A Ki Range can be inclusive or exclusive on both ends, may be reversed (e.g. 5..1),
  * and can be open on the left or right. Note: Ranges that are open should set the same
- * value for left and right.
+ * value for left and right. This is necessary because Comparable types don't require
+ * a max and min value.
  *
  * Reversed ranges represent downward progressions. Open ended ranges indicate that one
  * end is not bounded.
@@ -39,10 +40,10 @@ data class Range<T : Comparable<T>>(val left:T, val right:T,
         return leftString + type.operator + rightString
     }
 
-    fun min() : T = if(left.compareTo(right)<0) left else right
-    fun max() : T = if(left.compareTo(right)>0) left else right
+    var min : T = if(left.compareTo(right)<0) left else right
+    var max : T = if(left.compareTo(right)>0) left else right
 
-    fun reversed() : Boolean = left.compareTo(right) > 0
+    var reversed : Boolean = left.compareTo(right) > 0
 
     operator fun contains(element:T) : Boolean {
         if(openLeft) {
@@ -60,10 +61,10 @@ data class Range<T : Comparable<T>>(val left:T, val right:T,
         } else {
             return when (type) {
                 Type.Inclusive -> element in left..right
-                Type.Exclusive -> element > min() && element < max()
-                Type.ExclusiveLeft -> if (reversed()) element < left && element >= right
+                Type.Exclusive -> element > min && element < max
+                Type.ExclusiveLeft -> if (reversed) element < left && element >= right
                 else element > left && element <= right
-                Type.ExclusiveRight -> if (reversed()) element <= left && element > right
+                Type.ExclusiveRight -> if (reversed) element <= left && element > right
                 else element >= left && element < right
             }
         }

@@ -9,17 +9,17 @@ import org.junit.jupiter.api.Test
  */
 class KiTest {
 
-    @Test fun testSimpleTypes() {
+    @Test fun simpleTypes() {
         assertEquals("Dec", TypeDef.Dec.toString())
         assertEquals("Dec?", TypeDef.Dec_N.toString())
     }
 
-    @Test fun testQuantityTypes() {
+    @Test fun quantityTypes() {
         assertEquals("Quantity<Length>", QuantityDef(false, Length::class, Type.Dec).toString())
         assertEquals("Quantity<Length:L>?", QuantityDef(true, Length::class, Type.Long).toString())
     }
 
-    @Test fun testGenericStructureTypes() {
+    @Test fun genericStructureTypes() {
         assertEquals("Range<Version>", RangeDef(false, TypeDef.Version).toString())
         val listDef = ListDef(false, TypeDef.Int)
         assertEquals("List<Int>", listDef.toString())

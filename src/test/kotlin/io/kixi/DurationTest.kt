@@ -9,7 +9,7 @@ import java.time.Duration
 
 class DurationTest {
 
-    @Test fun testDurationSingleUnits() {
+    @Test fun durationSingleUnits() {
         var dur = Duration.ofDays(1)
         assertEquals(dur, parse("1day"))
         assertEquals("1day", format(dur))
@@ -44,7 +44,7 @@ class DurationTest {
     }
 
 
-    @Test fun testDurationCompound() {
+    @Test fun durationCompound() {
         var durHMS = Duration.ofHours(5).plusMinutes(6).plusSeconds(7)
         assertEquals("5:6:7", format(durHMS))
         assertEquals("05:06:07", format(durHMS, zeroPad = true))
@@ -65,13 +65,13 @@ class DurationTest {
         assertEquals("5days:04:03:02", format(durDHMS, zeroPad = true))
     }
 
-    @Test fun testEqualsForVaryingFormats() {
+    @Test fun equalsForVaryingFormats() {
         assertEquals(parse("5h"), parse("5:0:0"))
         assertEquals(parse("48h"), parse("2days"))
         assertEquals(parse("53:04:03.111000"), parse("2days:5:4:3.111"))
     }
 
-    @Test fun testNegativeDurationParsing() {
+    @Test fun negativeDurationParsing() {
         // Parsing
         assertEquals(Duration.ofDays(-1), parse("-1day"))
         assertEquals(Duration.ofDays(-2), parse("-2days"))
@@ -84,7 +84,7 @@ class DurationTest {
                 .plusSeconds(-4).plusMillis(-567), parse("-1day:2:3:4.567"))
     }
 
-    @Test fun testNegativeDurationFormatting() {
+    @Test fun negativeDurationFormatting() {
         // Individual Unit
         assertEquals("-1day", format(Duration.ofDays(-1)))
         assertEquals("-2days", format(Duration.ofDays(-2)))

@@ -8,7 +8,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.Assertions.*
 
 internal class TypeDefTest {
-    @Test fun testBool() {
+    @Test fun bools() {
         assertTrue(TypeDef.Bool.matches(true))
         assertTrue(TypeDef.Bool.matches(false))
         assertFalse(TypeDef.Bool.matches(5))
@@ -16,7 +16,7 @@ internal class TypeDefTest {
         assertFalse(TypeDef.Bool.matches(null))
     }
 
-    @Test fun testNumbers() {
+    @Test fun numbers() {
         assertTrue(TypeDef.Int.matches(5))
         assertFalse(TypeDef.Int.matches(6L))
         assertFalse(TypeDef.Int.matches(null))
@@ -29,7 +29,7 @@ internal class TypeDefTest {
         assertTrue(TypeDef.Number_N.matches(null))
     }
 
-    @Test fun testQuantities() {
+    @Test fun quantities() {
         assertTrue(QuantityDef(true, Length::class, Type.Dec).matches(
             Quantity("5.0", Unit.cm)
         ))
@@ -41,12 +41,12 @@ internal class TypeDefTest {
         ))
     }
 
-    @Test fun testRanges() {
+    @Test fun ranges() {
         assertTrue(RangeDef(true, TypeDef.Int).matches(Range(1,5)))
         assertFalse(RangeDef(true, TypeDef.Int).matches(Range(1.0,5.2)))
     }
 
-    @Test fun testLists() {
+    @Test fun lists() {
         assertTrue(ListDef(false, TypeDef.Int).matches(emptyList<Int>()))
         assertTrue(ListDef(false, TypeDef.Int).matches(listOf(1, 2, 3)))
         assertTrue(ListDef(false, TypeDef.Number).matches(listOf(1, 2, 3.0)))
@@ -64,7 +64,7 @@ internal class TypeDefTest {
         assertFalse(listOfMaps.matches(listOf(mapOf('1' to 2), mapOf('3' to 4), mapOf('5' to 6L))))
     }
 
-    @Test fun testMaps() {
+    @Test fun maps() {
         assertTrue(MapDef(false, TypeDef.String, TypeDef.Int)
             .matches(emptyMap<String, Int>()))
         assertTrue(MapDef(false, TypeDef.String, TypeDef.Int)

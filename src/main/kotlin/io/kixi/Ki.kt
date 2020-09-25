@@ -369,7 +369,7 @@ class Ki {
             val parts = text.replace("_", "").split(':')
             val sign = if (text[0]=='-') "-" else ""
 
-            when (parts.size) {
+            return when (parts.size) {
                 4 -> {
                     // is compound with day
                     val dayIndex = parts[0].indexOf("day")
@@ -379,7 +379,7 @@ class Ki {
                                     "suffixed with \"day\" or \"days\"."
                         )
                     }
-                    return Duration.ofDays((parts[0].substring(0, dayIndex)).toLong())
+                    Duration.ofDays((parts[0].substring(0, dayIndex)).toLong())
                         .plus(Duration.ofHours((sign + parts[1]).toLong()))
                         .plus(Duration.ofMinutes((sign + (parts[2])).toLong())
                             .plus(
@@ -389,7 +389,7 @@ class Ki {
                 }
                 3 -> {
                     // is compound without day
-                    return Duration.ofHours((parts[0]).toLong())
+                    Duration.ofHours((parts[0]).toLong())
                         .plus(Duration.ofMinutes((sign + parts[1]).toLong()))
                         .plus(
                             if(sign=="-") Duration.ofNanos(-secStringToNanos(parts[2]))
@@ -398,27 +398,24 @@ class Ki {
                 }
                 1 -> {
                     // TODO: Fractional units for single unit durations.
-                    return when {
+                    when {
                         text.endsWith("day") ->
-                            return Duration.ofDays((text.removeSuffix("day")).toLong())
+                            Duration.ofDays((text.removeSuffix("day")).toLong())
                         text.endsWith("days") ->
-                            return Duration.ofDays((text.removeSuffix("days")).toLong())
+                            Duration.ofDays((text.removeSuffix("days")).toLong())
                         text.endsWith("h") ->
-                            return Duration.ofHours((text.removeSuffix("h")).toLong())
+                            Duration.ofHours((text.removeSuffix("h")).toLong())
                         text.endsWith("min") ->
-                            return Duration.ofMinutes((text.removeSuffix("min")).toLong())
+                            Duration.ofMinutes((text.removeSuffix("min")).toLong())
                         // We have to check "ms" and "ns" before "s"
                         text.endsWith("ms") ->
-                            return Duration.ofMillis((text.removeSuffix("ms")).toLong())
+                            Duration.ofMillis((text.removeSuffix("ms")).toLong())
                         text.endsWith("ns") ->
-                            return Duration.ofNanos((text.removeSuffix("ns")).toLong())
+                            Duration.ofNanos((text.removeSuffix("ns")).toLong())
                         text.endsWith("s") -> {
                             // Deal with fractional seconds
                             val secText = text.removeSuffix("s")
-                            return  if(sign=="-") Duration.ofNanos(-secStringToNanos(
-                                secText
-                            )
-                            )
+                            if(sign=="-") Duration.ofNanos(-secStringToNanos(secText))
                             else Duration.ofNanos(secStringToNanos(secText))
                         }
                         else -> throw ParseException("Unkown temporal unit in duration.")

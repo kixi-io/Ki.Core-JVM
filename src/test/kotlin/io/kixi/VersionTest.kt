@@ -8,7 +8,7 @@ import org.junit.jupiter.api.Test
 
 class VersionTest {
 
-    @Test fun testVersionParser() {
+    @Test fun versionParser() {
         assertEquals(Version.parse("5.2.3").toString(), "5.2.3")
         assertEquals(Version.parse("05.02.03").toString(), "5.2.3")
         assertEquals(Version.parse("5.2").toString(), "5.2.0")
@@ -24,7 +24,7 @@ class VersionTest {
             "5.2.3-alpha-5")
     }
 
-    @Test fun testVersionParserInvalid() {
+    @Test fun versionParserInvalid() {
         assertThrows(ParseException::class.java) { Version.parse("-5.0.1") }
         assertThrows(ParseException::class.java) { Version.parse("5.-0.1") }
         assertThrows(ParseException::class.java) { Version.parse("5.0.-1") }
@@ -37,7 +37,7 @@ class VersionTest {
      * Check for comparison of numeric components, qualifiers and qualifier numbers,
      * including cases where one qualifier isn't present.
      */
-    @Test fun testCompareTo() {
+    @Test fun compareTo() {
         assertEquals(Version.parse("5"), Version.parse("5.0.0"))
         assertTrue(Version(5) > Version(4))
         assertTrue(Version.parse("5") > Version.parse("5-alpha"))
