@@ -1,18 +1,18 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <module version="4">
-  <component name="ExternalSystem" externalSystem="GRADLE" externalSystemModuleGroup="io.kixi" externalSystemModuleType="sourceSet" externalSystemModuleVersion="1.0.0-beta-1" linkedProjectId="Ki.Core:main" linkedProjectPath="$MODULE_DIR$/../.." rootProjectPath="$MODULE_DIR$/../.." />
   <component name="FacetManager">
     <facet type="kotlin-language" name="Kotlin">
-      <configuration version="3" platform="JVM 1.6" allPlatforms="JVM [1.6]" useProjectSettings="false">
+      <configuration version="3" platform="JVM 11" allPlatforms="JVM [11]" useProjectSettings="false">
         <compilerSettings>
           <option name="additionalArguments" value="-Xallow-no-source-files" />
         </compilerSettings>
         <compilerArguments>
           <option name="destination" value="$MODULE_DIR$/../../build/classes/kotlin/main" />
-          <option name="classpath" value="$USER_HOME$/.gradle/caches/modules-2/files-2.1/org.jetbrains.kotlin/kotlin-stdlib-jdk8/1.4.10/998caa30623f73223194a8b657abd2baec4880ea/kotlin-stdlib-jdk8-1.4.10.jar:/Users/danielleuck/.gradle/caches/modules-2/files-2.1/org.jetbrains.kotlin/kotlin-stdlib-jdk7/1.4.10/30e46450b0bb3dbf43898d2f461be4a942784780/kotlin-stdlib-jdk7-1.4.10.jar:/Users/danielleuck/.gradle/caches/modules-2/files-2.1/org.jetbrains.kotlin/kotlin-stdlib/1.4.10/ea29e063d2bbe695be13e9d044dcfb0c7add398e/kotlin-stdlib-1.4.10.jar:/Users/danielleuck/.gradle/caches/modules-2/files-2.1/org.jetbrains.kotlin/kotlin-stdlib-common/1.4.10/6229be3465805c99db1142ad75e6c6ddeac0b04c/kotlin-stdlib-common-1.4.10.jar:/Users/danielleuck/.gradle/caches/modules-2/files-2.1/org.jetbrains/annotations/13.0/919f0dfe192fb4e063e7dacadee7f8bb9a2672a9/annotations-13.0.jar" />
+          <option name="classpath" value="$USER_HOME$/.gradle/caches/modules-2/files-2.1/org.jetbrains.kotlin/kotlin-stdlib/1.4.10/ea29e063d2bbe695be13e9d044dcfb0c7add398e/kotlin-stdlib-1.4.10.jar:/Users/danielleuck/.gradle/caches/modules-2/files-2.1/org.jetbrains.kotlin/kotlin-stdlib-common/1.4.10/6229be3465805c99db1142ad75e6c6ddeac0b04c/kotlin-stdlib-common-1.4.10.jar:/Users/danielleuck/.gradle/caches/modules-2/files-2.1/org.jetbrains/annotations/13.0/919f0dfe192fb4e063e7dacadee7f8bb9a2672a9/annotations-13.0.jar" />
           <option name="noStdlib" value="true" />
           <option name="noReflect" value="true" />
           <option name="moduleName" value="Ki.Core" />
+          <option name="jvmTarget" value="11" />
           <option name="languageVersion" value="1.4" />
           <option name="apiVersion" value="1.4" />
           <option name="pluginOptions">

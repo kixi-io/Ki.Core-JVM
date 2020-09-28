@@ -1,7 +1,7 @@
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 group = "io.kixi"
-version = "1.0.0-beta-1"
+version = "1.0.0-beta-2"
 description = "ki-core"
 
 plugins {

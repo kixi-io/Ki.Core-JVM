@@ -1,4 +1,5 @@
 @file:Suppress("unused")
+@file:JvmName("Log")
 
 package io.kixi
 
