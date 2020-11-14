@@ -27,9 +27,9 @@ open class Call {
 
     override fun toString(): String {
         if(values.isEmpty() && attributes.isEmpty())
-            return "$nsid"
+            return "$nsid()"
 
-        val builder = StringBuilder("$nsid ")
+        val builder = StringBuilder("$nsid(")
 
         // output values
         if(values.isNotEmpty()) {
@@ -37,7 +37,7 @@ open class Call {
             while (i.hasNext()) {
                 builder.append(Ki.format(i.next()))
                 if(i.hasNext()) {
-                    builder.append(" ")
+                    builder.append(", ")
                 }
             }
         }
@@ -45,7 +45,7 @@ open class Call {
         // output attributes
         if (attributes.isNotEmpty()) {
             if(values.isNotEmpty()) {
-                builder.append(" ")
+                builder.append(", ")
             }
 
             val i = attributes.entries.iterator()
@@ -53,11 +53,12 @@ open class Call {
                 val e = i.next()
                 builder.append("${e.key}=${Ki.format(e.value)}")
                 if(i.hasNext()) {
-                    builder.append(" ")
+                    builder.append(", ")
                 }
             }
         }
-        return builder.toString()
+
+        return builder.append(')').toString()
     }
 
     // Values ////
@@ -115,7 +116,7 @@ open class Call {
      *
      * @return true if the tag entities are equivalent
      */
-    override fun equals(other: Any?): Boolean = other is Annotation && other.toString() == toString()
+    override fun equals(other: Any?): Boolean = other is Call && other.toString() == toString()
 
     /**
      * @return The hash (based on the output from toString())
