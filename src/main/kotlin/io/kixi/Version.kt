@@ -33,7 +33,7 @@ import java.lang.IllegalArgumentException
  *    non-zero qualifierNumber is provided without a qualifier string
  */
 class Version (var major: Int, var minor: Int = 0, var micro: Int = 0, var qualifier: String = "",
-               var qualifierNumber: Int = 0) : Comparable<Any?> {
+               var qualifierNumber: Int = 0) : Comparable<Version> {
 
     init {
         if(major<0 || minor<0 || micro<0)
@@ -66,7 +66,7 @@ class Version (var major: Int, var minor: Int = 0, var micro: Int = 0, var quali
      * @param other Any?
      * @return Int
      */
-    override operator fun compareTo(other: Any?): Int {
+    override operator fun compareTo(other: Version): Int {
         if (other === this) return 0
 
         other as Version
