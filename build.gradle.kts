@@ -6,7 +6,7 @@ description = "ki-core"
 
 plugins {
     `java-library`
-    kotlin("jvm") version "1.5.31"
+    kotlin("jvm") version "1.6.+"
 }
 
 java {
@@ -24,8 +24,13 @@ dependencies {
     testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine")
 }
 
-tasks.withType<KotlinCompile> {
-    kotlinOptions.jvmTarget = "${JavaVersion.VERSION_11}"
+tasks.withType<KotlinCompile>().configureEach {
+    kotlinOptions {
+        apiVersion = "1.6"
+        languageVersion = "1.6"
+        jvmTarget = "${JavaVersion.VERSION_11}"
+        allWarningsAsErrors = true
+    }
 }
 
 tasks.test {
