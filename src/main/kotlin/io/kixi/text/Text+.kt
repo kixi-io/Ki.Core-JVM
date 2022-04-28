@@ -48,10 +48,9 @@ fun CharSequence.countAlphaNum(): Int {
 }
 
 fun Char.unicodeEscape(): String {
-    val cval = this.toInt()
     val buf = StringBuffer()
     buf.append("\\u")
-    val ns = Integer.toHexString(cval)
+    val ns = Integer.toHexString(this.code)
     buf.append(ns.padStart(4, '0'))
 
     return buf.toString()

@@ -69,8 +69,6 @@ class Version (var major: Int, var minor: Int = 0, var micro: Int = 0, var quali
     override operator fun compareTo(other: Version): Int {
         if (other === this) return 0
 
-        other as Version
-
         var result: Int = major - other.major
         if (result != 0) {
             return result
