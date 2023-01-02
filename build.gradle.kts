@@ -6,7 +6,7 @@ description = "ki-core"
 
 plugins {
     `java-library`
-    kotlin("jvm") version "1.6.+"
+    kotlin("jvm") version "1.8.+"
 }
 
 java {
