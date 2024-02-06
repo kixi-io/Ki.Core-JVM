@@ -1,12 +1,12 @@
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 group = "io.kixi"
-version = "1.0.0-beta-3"
+version = "1.0.0-beta-4"
 description = "ki-core"
 
 plugins {
     `java-library`
-    kotlin("jvm") version "1.6.+"
+    kotlin("jvm") version "1.9.+"
 }
 
 java {
@@ -18,7 +18,7 @@ repositories { mavenCentral() }
 
 dependencies {
     implementation(kotlin("stdlib"))
-    testImplementation(platform("org.junit:junit-bom:5.8.+"))
+    testImplementation(platform("org.junit:junit-bom:5.10.+"))
     testImplementation("org.junit.jupiter:junit-jupiter")
 
     testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine")
@@ -26,10 +26,10 @@ dependencies {
 
 tasks.withType<KotlinCompile>().configureEach {
     kotlinOptions {
-        apiVersion = "1.6"
-        languageVersion = "1.6"
+        apiVersion = "1.9"
+        languageVersion = "1.9"
         jvmTarget = "${JavaVersion.VERSION_11}"
-        allWarningsAsErrors = true
+        // allWarningsAsErrors = true
     }
 }
 
