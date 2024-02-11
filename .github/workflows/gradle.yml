@@ -26,7 +26,7 @@ jobs:
   release:
     name: Release
     needs: build
-    if: ${{ needs.build.result == 'success' }}
+    if: ${{ needs.build.result == 'success' && contains('refs/heads/master', github.ref) }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
