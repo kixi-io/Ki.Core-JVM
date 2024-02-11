@@ -4,6 +4,7 @@ import org.jetbrains.kotlin.gradle.dsl.KotlinVersion
 group = "io.kixi"
 version = "1.0.0-SNAPSHOT"
 description = "ki-core"
+val jpmsModuleName = "kixi.ki.core"
 
 plugins {
     `java-library`
@@ -16,11 +17,21 @@ plugins {
 java {
     sourceCompatibility = JavaVersion.VERSION_11
     targetCompatibility = JavaVersion.VERSION_11
+    modularity.inferModulePath.set(true)
+}
+tasks.named("compileJava", JavaCompile::class.java) {
+    options.compilerArgumentProviders.add(CommandLineArgumentProvider {
+        // Provide compiled Kotlin classes to javac – needed for module-info.java to get compiled
+        // due to requirement of mixed Java/Kotlin sources
+        listOf("--patch-module", "${jpmsModuleName}=${sourceSets["main"].output.asPath}")
+    })
 }
 kotlin {
     compilerOptions {
         jvmTarget.set(JvmTarget.JVM_11)
         languageVersion.set(KotlinVersion.KOTLIN_1_9)
+        moduleName = jpmsModuleName
+        allWarningsAsErrors = true
     }
 }
 
@@ -38,6 +49,11 @@ dependencies {
 // tasks all start with same text (should be lowercase)
 tasks.withType<org.gradle.jvm.tasks.Jar>() {
     archiveBaseName.set("ki-core")
+    manifest {
+        attributes["Build-Jdk-Spec"] = JavaVersion.current().majorVersion
+        attributes["Package"] = "io.kixi.core"
+        attributes["Created-By"] = "kixi.io"
+    }
 }
 
 // use Dokka for generating a javadoc jar
