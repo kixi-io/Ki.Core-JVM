@@ -2,7 +2,7 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.dsl.KotlinVersion
 
 group = "io.kixi"
-version = "1.0.0-beta-4"
+version = "1.0.0-SNAPSHOT"
 description = "ki-core"
 
 plugins {
