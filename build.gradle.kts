@@ -39,7 +39,7 @@ repositories { mavenCentral() }
 
 dependencies {
     implementation(kotlin("stdlib-jdk8"))
-    testImplementation(platform("org.junit:junit-bom:5.10.+"))
+    testImplementation(platform("org.junit:junit-bom:5.11.+"))
     testImplementation("org.junit.jupiter:junit-jupiter")
 
     testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine")
