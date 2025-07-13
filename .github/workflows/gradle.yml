@@ -1,6 +1,17 @@
 name: Java CI
 
-on: [push]
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - master
+  pull_request:
+    types: [opened, reopened, synchronize]
+    branches:
+      - master
+
+permissions:
+  contents: read
 
 jobs:
   build:
@@ -9,7 +20,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        jdk: ['11', '17', '21']
+        jdk: ['11', '17', '21', '24']
 
     steps:
       - uses: actions/checkout@v4

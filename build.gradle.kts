@@ -2,15 +2,15 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.dsl.KotlinVersion
 
 group = "io.kixi"
-version = "1.0.0-SNAPSHOT"
+version = "1.1.0-SNAPSHOT"
 description = "ki-core"
 val jpmsModuleName = "kixi.ki.core"
 
 plugins {
     `java-library`
     `maven-publish`
-    kotlin("jvm") version "1.9.+"
-    id("org.jetbrains.dokka") version "1.9.+"
+    kotlin("jvm") version "2.1.+"
+    id("org.jetbrains.dokka") version "2.0.0"
     signing
 }
 
@@ -39,10 +39,11 @@ repositories { mavenCentral() }
 
 dependencies {
     implementation(kotlin("stdlib-jdk8"))
-    testImplementation(platform("org.junit:junit-bom:5.10.+"))
+    testImplementation(platform("org.junit:junit-bom:5.13.+"))
     testImplementation("org.junit.jupiter:junit-jupiter")
 
     testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine")
+    testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
 
 // Ensure that artifacts for jar, kotlinSourcesJar, and dokkaJavadocJar
