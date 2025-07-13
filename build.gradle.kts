@@ -90,20 +90,12 @@ val javadocJar by tasks.named("dokkaJavadocJar")
 publishing {
     repositories {
         maven {
-            if (System.getenv().containsKey("CI")) {
-                // todo: Rather than use GitHub Packages it would be better to publish to maven central (requires signed artifacts)
-                name = "GitHub-Packages"
-                url = uri("https://maven.pkg.github.com/kixi-io/Ki.Core-JVM/")
-                credentials {
-                    username = System.getenv("GITHUB_ACTOR")
-                    password = System.getenv("GITHUB_TOKEN")
-                }
-            } else {
-                val releasesRepoUrl = layout.buildDirectory.dir("repos/releases")
-                val snapshotsRepoUrl = layout.buildDirectory.dir("repos/snapshots")
-                val localReleasePath = if (version.toString().endsWith("SNAPSHOT")) snapshotsRepoUrl else releasesRepoUrl
-                url = uri(localReleasePath)
-                name = "local-build-dir"
+            // todo: Rather than use GitHub Packages it would be better to publish to maven central (requires signed artifacts)
+            name = "GitHubPackages"
+            url = uri("https://maven.pkg.github.com/kixi-io/Ki.Core-JVM")
+            credentials {
+                username = System.getenv("GITHUB_ACTOR")
+                password = System.getenv("GITHUB_TOKEN")
             }
         }
     }
