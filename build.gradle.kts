@@ -9,7 +9,7 @@ val jpmsModuleName = "kixi.ki.core"
 plugins {
     `java-library`
     `maven-publish`
-    kotlin("jvm") version "2.1.+"
+    kotlin("jvm") version "2.2.+"
     id("org.jetbrains.dokka") version "2.0.0"
     signing
 }
