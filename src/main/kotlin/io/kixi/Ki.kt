@@ -126,6 +126,7 @@ class Ki {
                 is ZonedDateTime -> formatZonedDateTime(obj)
                 is Duration -> formatDuration(obj)
                 is Blob -> obj.toString()
+                is Email -> obj.toString()
                 is GeoPoint -> obj.toString()
                 is URL -> "<$obj>"
                 is Version -> obj.toString()
@@ -198,6 +199,10 @@ class Ki {
             // URL
             if (firstChar == '<' && lastChar == '>') {
                 return URL(trimmed.substring(1, trimmed.length - 1))
+            }
+
+            if (Email.isLiteral(trimmed)) {
+                return Email.parseLiteral(trimmed)
             }
 
             // Blob

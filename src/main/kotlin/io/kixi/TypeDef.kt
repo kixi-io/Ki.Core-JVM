@@ -68,6 +68,9 @@ open class TypeDef(val type: Type, val nullable: Boolean) {
         val Blob = TypeDef(Type.Blob, false)
         val Blob_N = TypeDef(Type.Blob, true)
 
+        val Email = TypeDef(Type.Email, false)
+        val Email_N = TypeDef(Type.Email, true)
+
         val GeoPoint = TypeDef(Type.GeoPoint, false)
         val GeoPoint_N = TypeDef(Type.GeoPoint, true)
 
@@ -98,6 +101,7 @@ open class TypeDef(val type: Type, val nullable: Boolean) {
             "Duration" -> Duration; "Duration_N" -> Duration_N
             "Version" -> Version; "Version_N" -> Version_N
             "Blob" -> Blob; "Blob_N" -> Blob_N
+            "Email" -> Email; "Email_N" -> Email_N
             "GeoPoint" -> GeoPoint; "GeoPoint_N" -> GeoPoint_N
             "Any" -> Any; "Any_N" -> Any_N
 

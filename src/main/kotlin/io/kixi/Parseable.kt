@@ -48,6 +48,7 @@ import io.kixi.text.ParseException
  * | Type | Example Literal | Description |
  * |------|-----------------|-------------|
  * | [Blob] | `.blob(SGVsbG8=)` | Binary data in Base64 |
+ * | [Email] | `user@domain.com` | Email address |
  * | [GeoPoint] | `.geo(37.7749, -122.4194)` | Geographic coordinates |
  * | [KiTZ] | `US/PST` | Ki timezone identifier |
  * | [KiTZDateTime] | `2024/3/15@14:30:00-US/PST` | DateTime with KiTZ |
