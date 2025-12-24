@@ -1,6 +1,9 @@
 package io.kixi
 
 import io.kixi.text.ParseException
+import java.util.*
+import kotlin.collections.ArrayList
+import kotlin.collections.HashMap
 
 /**
  * A Call is a [KTS](https://github.com/kixi-io/Ki.Docs/wiki/Ki-Types) type that
@@ -36,11 +39,30 @@ open class Call {
     val attributes: MutableMap<NSID, Any?>
         get() = _attributes ?: HashMap<NSID, Any?>().also { _attributes = it }
 
+    /*
+    println(Call("fooFromString"))
+    println(Call("fooFromStringWithValues", 1, 2, 3)) // fails
+    println(Call(NSID("fooFromNSID")))
+    println(Call(NSID("fooFromNSIDWithValues"), 1, 2, 3))
+    */
+
+    // constructor(name: String, namespace: String = "") : this(NSID(name, namespace))
+
+    // Fails
+    constructor(name: String, namespace: String = "", vararg values: Array<out List<Any?>> = emptyArray())
+            : this(NSID(name, namespace)) {
+
+        if(values.isNotEmpty()) this.values.addAll(values)
+    }
+
     constructor(nsid: NSID) {
         this.nsid = nsid
     }
 
-    constructor(name: String, namespace: String = "") : this(NSID(name, namespace))
+    constructor(nside: NSID, vararg values: Any?)
+            : this(nside) {
+        this.values.addAll(values)
+    }
 
     /**
      * Returns true if this Call has any values.
@@ -225,7 +247,7 @@ open class Call {
     /**
      * Sets an attribute and returns this Call for chaining.
      */
-    fun withAttribute(name: String, value: Any?, namespace: String = ""): Call = apply {
+    fun withAttribute(name: String, namespace: String = "", value: Any?): Call = apply {
         setAttribute(name, namespace, value)
     }
 

@@ -170,8 +170,8 @@ class CallTest : FunSpec({
 
         test("withAttribute adds and returns self") {
             val call = Call("func")
-                .withAttribute("x", 1)
-                .withAttribute("y", 2)
+                .withAttribute("x", value=1)
+                .withAttribute("y", value=2)
             call.attributeCount shouldBe 2
             call.getAttribute<Int>("x") shouldBe 1
         }
@@ -180,7 +180,7 @@ class CallTest : FunSpec({
             val call = Call("point")
                 .withValue(10)
                 .withValue(20)
-                .withAttribute("label", "A")
+                .withAttribute("label", value = "A")
 
             call.valueCount shouldBe 2
             call.attributeCount shouldBe 1
@@ -201,14 +201,14 @@ class CallTest : FunSpec({
 
         test("call with attributes only") {
             val call = Call("config")
-                .withAttribute("debug", true)
+                .withAttribute("debug", value=true)
             call.toString() shouldBe "config(debug=true)"
         }
 
         test("call with values and attributes") {
             val call = Call("create")
                 .withValue("item")
-                .withAttribute("count", 5)
+                .withAttribute("count", value=5)
             call.toString() shouldBe "create(\"item\", count=5)"
         }
 
@@ -225,8 +225,8 @@ class CallTest : FunSpec({
 
     context("equality") {
         test("equal calls") {
-            val call1 = Call("func").withValue(1).withAttribute("a", "b")
-            val call2 = Call("func").withValue(1).withAttribute("a", "b")
+            val call1 = Call("func").withValue(1).withAttribute("a", value="b")
+            val call2 = Call("func").withValue(1).withAttribute("a", value="b")
             call1 shouldBe call2
         }
 
@@ -237,8 +237,8 @@ class CallTest : FunSpec({
         }
 
         test("different attributes not equal") {
-            val call1 = Call("func").withAttribute("a", 1)
-            val call2 = Call("func").withAttribute("a", 2)
+            val call1 = Call("func").withAttribute("a", value=1)
+            val call2 = Call("func").withAttribute("a", value=2)
             call1 shouldNotBe call2
         }
 

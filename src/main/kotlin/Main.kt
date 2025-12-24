@@ -51,4 +51,22 @@ fun main() {
     println(pst.kiFormat())
     println(KiTZDateTime("2024/3/15@14:23:35-US/PST"))
     println(KiTZDateTime("2024/3/15@14:23:35-US/PST").informalFormat())
+
+    // Calls ////
+
+    println(Call("fooFromString"))
+    println(Call("fooStringWithNamespace", namespace = "myNS"))
+    println(Call(NSID("fooFromNSID")))
+    println(Call(NSID("fooFromNSIDWithValues"), 1, 2, 3))
+
+    val colors = Call("foo")
+    colors.attributes.set(NSID("color1"), "green")
+    colors.attributes.set(NSID("color2"), "blue")
+    println(colors)
+
+    val pallet = Call("foo")
+    pallet.values.add("purple")
+    pallet.attributes.set(NSID("color1"), "green")
+    pallet.attributes.set(NSID("color2"), "blue")
+    println(pallet)
 }
