@@ -1,7 +1,6 @@
 package io.kixi
 
 import io.kixi.text.ParseException
-import java.util.*
 import kotlin.collections.ArrayList
 import kotlin.collections.HashMap
 
@@ -269,7 +268,7 @@ open class Call {
      */
     fun <T> getAttributesInNamespace(namespace: String): Map<String, T> {
         if (_attributes == null) {
-            @Suppress("UNCHECKED_CAST")
+            // @Suppress("UNCHECKED_CAST")
             return emptyMap<String, T>() as Map<String, T>
         }
 
