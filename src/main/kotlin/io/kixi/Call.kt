@@ -39,29 +39,95 @@ open class Call {
     val attributes: MutableMap<NSID, Any?>
         get() = _attributes ?: HashMap<NSID, Any?>().also { _attributes = it }
 
-    /*
-    println(Call("fooFromString"))
-    println(Call("fooFromStringWithValues", 1, 2, 3)) // fails
-    println(Call(NSID("fooFromNSID")))
-    println(Call(NSID("fooFromNSIDWithValues"), 1, 2, 3))
-    */
+    // ===== NSID-based Constructors =====
 
-    // constructor(name: String, namespace: String = "") : this(NSID(name, namespace))
-
-    // Fails
-    constructor(name: String, namespace: String = "", vararg values: Array<out List<Any?>> = emptyArray())
-            : this(NSID(name, namespace)) {
-
-        if(values.isNotEmpty()) this.values.addAll(values)
-    }
-
+    /**
+     * Creates a Call with just an NSID (no values or attributes).
+     *
+     * @param nsid The namespaced identifier for this call
+     */
     constructor(nsid: NSID) {
         this.nsid = nsid
     }
 
-    constructor(nside: NSID, vararg values: Any?)
-            : this(nside) {
-        this.values.addAll(values)
+    /**
+     * Creates a Call with an NSID and values (vararg).
+     *
+     * Example:
+     * ```kotlin
+     * Call(NSID("add"), 1, 2, 3)
+     * Call(NSID("greet"), "Hello", "World")
+     * ```
+     *
+     * @param nsid The namespaced identifier for this call
+     * @param values The indexed arguments (values) for this call
+     */
+    constructor(nsid: NSID, vararg values: Any?) : this(nsid) {
+        if (values.isNotEmpty()) this.values.addAll(values)
+    }
+
+    /**
+     * Creates a Call with an NSID and attributes only.
+     *
+     * Example:
+     * ```kotlin
+     * Call(NSID("config"), mapOf(NSID("debug") to true, NSID("level") to 5))
+     * ```
+     *
+     * @param nsid The namespaced identifier for this call
+     * @param attributes The named arguments (attributes) for this call
+     */
+    constructor(nsid: NSID, attributes: Map<NSID, Any?>) : this(nsid) {
+        if (attributes.isNotEmpty()) this.attributes.putAll(attributes)
+    }
+
+    /**
+     * Creates a Call with an NSID, values list, and attributes map.
+     *
+     * Example:
+     * ```kotlin
+     * Call(NSID("create"), listOf("item", 5), mapOf(NSID("urgent") to true))
+     * ```
+     *
+     * @param nsid The namespaced identifier for this call
+     * @param values The indexed arguments (values) for this call
+     * @param attributes The named arguments (attributes) for this call
+     */
+    constructor(nsid: NSID, values: List<Any?>, attributes: Map<NSID, Any?>) : this(nsid) {
+        if (values.isNotEmpty()) this.values.addAll(values)
+        if (attributes.isNotEmpty()) this.attributes.putAll(attributes)
+    }
+
+    // ===== String-based Constructors =====
+
+    /**
+     * Creates a Call with name, optional namespace, optional values, and optional attributes.
+     *
+     * Use named parameters for values and attributes to avoid ambiguity.
+     *
+     * Examples:
+     * ```kotlin
+     * Call("func")                                              // name only
+     * Call("func", "ns")                                        // name and namespace
+     * Call("func", values = listOf(1, 2))                       // name with values
+     * Call("func", "ns", values = listOf(1, 2))                 // name, namespace, and values
+     * Call("func", attributes = mapOf(NSID("key") to "val"))    // name with attributes
+     * Call("func", values = listOf(1), attributes = mapOf(...)) // all parameters
+     * ```
+     *
+     * @param name The name of the call
+     * @param namespace The optional namespace (default: empty string)
+     * @param values Optional list of indexed arguments
+     * @param attributes Optional map of named arguments
+     */
+    constructor(
+        name: String,
+        namespace: String = "",
+        values: List<Any?>? = null,
+        attributes: Map<NSID, Any?>? = null
+    ) : this(NSID(name, namespace)) {
+        values?.let { if (it.isNotEmpty()) this.values.addAll(it) }
+        attributes?.let { if (it.isNotEmpty()) this.attributes.putAll(it) }
     }
 
     /**

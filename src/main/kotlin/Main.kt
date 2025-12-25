@@ -55,9 +55,11 @@ fun main() {
     // Calls ////
 
     println(Call("fooFromString"))
-    println(Call("fooStringWithNamespace", namespace = "myNS"))
+    println(Call("fooStringWithNamespace", "myNS"))
     println(Call(NSID("fooFromNSID")))
     println(Call(NSID("fooFromNSIDWithValues"), 1, 2, 3))
+
+    // TODO: allow attributes and values + attributes in the constructors.
 
     val colors = Call("foo")
     colors.attributes.set(NSID("color1"), "green")
