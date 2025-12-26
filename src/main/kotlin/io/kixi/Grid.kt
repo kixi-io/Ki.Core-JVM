@@ -637,16 +637,28 @@ class Grid<T> constructor(
 
     /**
      * Returns the Ki literal representation of this grid.
+     * If [elementType] is set, the type parameter is included.
      */
     override fun toString(): String = toKiLiteral()
 
     /**
-     * Returns the Ki literal representation with optional type annotation.
+     * Returns the Ki literal representation.
+     *
+     * @param includeType If true, always include type annotation.
+     *                    If false, only include if [elementType] is set.
+     *                    If null (default), include type only if [elementType] is set.
      */
-    fun toKiLiteral(includeType: Boolean = false): String {
+    fun toKiLiteral(includeType: Boolean? = null): String {
         val builder = StringBuilder()
 
-        if (includeType && elementType != null) {
+        // Include type if explicitly requested OR if elementType is set (and not explicitly excluded)
+        val shouldIncludeType = when (includeType) {
+            true -> elementType != null  // Explicitly requested, but only if we have a type
+            false -> false               // Explicitly excluded
+            null -> elementType != null  // Default: include if elementType is set
+        }
+
+        if (shouldIncludeType && elementType != null) {
             val typeName = when (elementType) {
                 Int::class.java, java.lang.Integer::class.java -> "Int"
                 Long::class.java, java.lang.Long::class.java -> "Long"
@@ -654,6 +666,8 @@ class Grid<T> constructor(
                 Float::class.java, java.lang.Float::class.java -> "Float"
                 String::class.java -> "String"
                 Boolean::class.java, java.lang.Boolean::class.java -> "Bool"
+                Number::class.java -> "Number"
+                Any::class.java -> "Any"
                 else -> elementType.simpleName
             }
             builder.append(".grid<$typeName>(\n")
