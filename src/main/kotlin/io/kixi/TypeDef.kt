@@ -74,6 +74,12 @@ open class TypeDef(val type: Type, val nullable: Boolean) {
         val GeoPoint = TypeDef(Type.GeoPoint, false)
         val GeoPoint_N = TypeDef(Type.GeoPoint, true)
 
+        val Coordinate = TypeDef(Type.Coordinate, false)
+        val Coordinate_N = TypeDef(Type.Coordinate, true)
+
+        val Grid = TypeDef(Type.Grid, false)
+        val Grid_N = TypeDef(Type.Grid, true)
+
         // nil
         val nil = TypeDef(Type.nil, true)
 
@@ -103,6 +109,8 @@ open class TypeDef(val type: Type, val nullable: Boolean) {
             "Blob" -> Blob; "Blob_N" -> Blob_N
             "Email" -> Email; "Email_N" -> Email_N
             "GeoPoint" -> GeoPoint; "GeoPoint_N" -> GeoPoint_N
+            "Coordinate" -> Coordinate; "Coordinate_N" -> Coordinate_N
+            "Grid" -> Grid; "Grid_N" -> Grid_N
             "Any" -> Any; "Any_N" -> Any_N
 
             else -> null
@@ -253,5 +261,47 @@ class MapDef(
         }
 
         return true
+    }
+}
+
+/**
+ * Type definition for Grid with element type.
+ *
+ * Represents a typed grid definition such as `Grid<Int>` or `Grid<String>?`.
+ *
+ * @property elementDef The type definition for grid elements
+ */
+class GridDef(
+    nullable: Boolean,
+    val elementDef: TypeDef
+) : TypeDef(Type.Grid, nullable) {
+    private val nullChar = if (nullable) "?" else ""
+
+    override fun toString() = "$type<$elementDef>$nullChar"
+
+    override fun hashCode(): Int {
+        var result = type.hashCode()
+        result = 31 * result + nullable.hashCode()
+        result = 31 * result + elementDef.hashCode()
+        return result
+    }
+
+    override fun equals(other: kotlin.Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+
+        other as GridDef
+        return other.type == type && other.nullable == nullable &&
+                other.elementDef == elementDef
+    }
+
+    override val generic: Boolean get() = true
+
+    override fun matches(value: kotlin.Any?): Boolean {
+        if (value == null) return nullable
+        if (value !is io.kixi.Grid<*>) return false
+
+        // Check that all grid values match the element type
+        return value.all { elementDef.matches(it) }
     }
 }

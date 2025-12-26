@@ -23,6 +23,8 @@ enum class Type(val kclass: KClass<*>, val supertype: Type?) {
     Blob(io.kixi.Blob::class, Any),
     GeoPoint(io.kixi.GeoPoint::class, Any),
     Email(io.kixi.Email::class, Any),
+    Coordinate(io.kixi.Coordinate::class, Any),
+    Grid(io.kixi.Grid::class, Any),
     Quantity(io.kixi.uom.Quantity::class, Any),
     Range(io.kixi.Range::class, Any),
     List(java.util.List::class, Any), Map(java.util.Map::class, Any),
@@ -57,6 +59,8 @@ enum class Type(val kclass: KClass<*>, val supertype: Type?) {
             is io.kixi.Blob -> Blob
             is io.kixi.GeoPoint -> GeoPoint
             is io.kixi.Email -> Email
+            is io.kixi.Coordinate -> Coordinate
+            is io.kixi.Grid<*> -> Grid
             is io.kixi.uom.Quantity<*> -> Quantity
             is io.kixi.Range<*> -> Range
             is kotlin.collections.List<*> -> List

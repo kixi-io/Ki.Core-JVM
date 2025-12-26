@@ -107,6 +107,13 @@ class Ki {
          * given quotes. Its newlines, carriage returns, tabs and backslashes
          * will be escaped. DateTime and Durations will use
          * [their canonical Ki form](https://github.com/kixi-io/Ki.Docs/wiki/Ki-Types#Date).
+         *
+         * ```kotlin
+         * val coord = Coordinate.standard(4, 7)
+         * Ki.formatCoordinate(coord)  // ".coordinate(x=4, y=7)"
+         * ```
+         *
+         *
          */
         @JvmStatic
         fun format(obj: Any?): String {
@@ -128,6 +135,8 @@ class Ki {
                 is Blob -> obj.toString()
                 is Email -> obj.toString()
                 is GeoPoint -> obj.toString()
+                is Coordinate -> obj.toString()
+                is Grid<*> -> obj.toString()
                 is URL -> "<$obj>"
                 is Version -> obj.toString()
                 is Range<*> -> obj.toString()
@@ -135,6 +144,64 @@ class Ki {
                 else -> obj.toString()
             }
         }
+
+        /**
+         * Formats a Coordinate as a Ki literal string.
+         *
+         * ```kotlin
+         * val coord = Coordinate.standard(4, 7)
+         * Ki.formatCoordinate(coord)  // ".coordinate(x=4, y=7)"
+         * ```
+         *
+         * @param coordinate The Coordinate to format
+         * @return The Ki literal representation
+         * @see Coordinate.toString
+         */
+        @JvmStatic
+        fun formatCoordinate(coordinate: Coordinate): String = coordinate.toString()
+
+        /**
+         * Formats a Grid as a Ki literal string.
+         *
+         * ```kotlin
+         * val grid = Grid.fromRows(listOf(1, 2, 3), listOf(4, 5, 6))
+         * Ki.formatGrid(grid)
+         * // ".grid(
+         * //     1  2  3
+         * //     4  5  6
+         * // )"
+         * ```
+         *
+         * @param grid The Grid to format
+         * @param includeType Whether to include the type annotation (e.g., `.grid<Int>`)
+         * @return The Ki literal representation
+         * @see Grid.toKiLiteral
+         */
+        @JvmStatic
+        @JvmOverloads
+        fun <T> formatGrid(grid: Grid<T>, includeType: Boolean = false): String =
+            grid.toKiLiteral(includeType)
+
+        /**
+         * Parse a Ki coordinate literal.
+         *
+         * Supports both standard and sheet notation:
+         * ```kotlin
+         * Ki.parseCoordinate(".coordinate(x=4, y=7)")
+         * Ki.parseCoordinate(".coordinate(c=\"E\", r=8)")
+         * ```
+         *
+         * For parsing simple notation strings like "A1" or "4,7", use [Coordinate.parse].
+         *
+         * @param coordinateLiteral The Ki coordinate literal string
+         * @return The parsed Coordinate
+         * @throws ParseException if the literal is malformed
+         * @see Coordinate.parseLiteral
+         */
+        @JvmStatic
+        fun parseCoordinate(coordinateLiteral: String): Coordinate =
+            Coordinate.parseLiteral(coordinateLiteral)
+
 
         /**
          * Get the Ki Type of a value.
@@ -213,6 +280,16 @@ class Ki {
             // GeoPoint
             if (trimmed.startsWith(".geo(")) {
                 return GeoPoint.parse(trimmed)
+            }
+
+            // Coordinate
+            if (trimmed.startsWith(".coordinate(")) {
+                return Coordinate.parseLiteral(trimmed)
+            }
+
+            // Grid - Note: Full grid parsing requires KD parser
+            if (trimmed.startsWith(".grid(") || trimmed.startsWith(".grid<")) {
+                return Grid.parseLiteral(trimmed)  // This will throw - requires KD
             }
 
             // Version (x.y.z pattern, no @ symbol, contains dots)
