@@ -96,7 +96,8 @@ class Grid<T> constructor(
     val width: Int,
     val height: Int,
     val data: Array<Any?>,
-    val elementType: Class<*>?
+    val elementType: Class<*>?,
+    val elementNullable: Boolean = false
 ) {
     init {
         require(width > 0) { "Width must be positive, got: $width" }
@@ -319,7 +320,7 @@ class Grid<T> constructor(
             }
         }
 
-        return Grid(height, width, newData, elementType)
+        return Grid(height, width, newData, elementType, elementNullable)
     }
 
     /**
@@ -338,16 +339,19 @@ class Grid<T> constructor(
         require(startY + subHeight <= height) { "Subgrid extends past bottom edge" }
 
         val newData = Array<Any?>(subWidth * subHeight) { null }
+        var hasNull = false
 
         for (y in 0 until subHeight) {
             for (x in 0 until subWidth) {
                 val srcIdx = (startY + y) * width + (startX + x)
                 val dstIdx = y * subWidth + x
-                newData[dstIdx] = data[srcIdx]
+                val value = data[srcIdx]
+                newData[dstIdx] = value
+                if (value == null) hasNull = true
             }
         }
 
-        return Grid(subWidth, subHeight, newData, elementType)
+        return Grid(subWidth, subHeight, newData, elementType, hasNull)
     }
 
     /**
@@ -358,13 +362,21 @@ class Grid<T> constructor(
      */
     inline fun <R> map(transform: (T?) -> R?): Grid<R> {
         val newData = Array<Any?>(size) { null }
+        var hasNull = false
+        var newElementType: Class<*>? = null
 
         for (i in data.indices) {
             @Suppress("UNCHECKED_CAST")
-            newData[i] = transform(data[i] as T?)
+            val value = transform(data[i] as T?)
+            newData[i] = value
+            if (value == null) {
+                hasNull = true
+            } else if (newElementType == null) {
+                newElementType = value!!::class.java
+            }
         }
 
-        return Grid(width, height, newData, null)
+        return Grid(width, height, newData, newElementType, hasNull)
     }
 
     /**
@@ -375,16 +387,24 @@ class Grid<T> constructor(
      */
     inline fun <R> mapIndexed(transform: (x: Int, y: Int, value: T?) -> R?): Grid<R> {
         val newData = Array<Any?>(size) { null }
+        var hasNull = false
+        var newElementType: Class<*>? = null
 
         for (y in 0 until height) {
             for (x in 0 until width) {
                 val idx = y * width + x
                 @Suppress("UNCHECKED_CAST")
-                newData[idx] = transform(x, y, data[idx] as T?)
+                val value = transform(x, y, data[idx] as T?)
+                newData[idx] = value
+                if (value == null) {
+                    hasNull = true
+                } else if (newElementType == null) {
+                    newElementType = value!!::class.java
+                }
             }
         }
 
-        return Grid(width, height, newData, null)
+        return Grid(width, height, newData, newElementType, hasNull)
     }
 
     /**
@@ -562,7 +582,7 @@ class Grid<T> constructor(
     /**
      * Creates a deep copy of this grid.
      */
-    fun copy(): Grid<T> = Grid(width, height, data.copyOf(), elementType)
+    fun copy(): Grid<T> = Grid(width, height, data.copyOf(), elementType, elementNullable)
 
     /**
      * Returns all values as a flat list (row-major order).
@@ -670,7 +690,8 @@ class Grid<T> constructor(
                 Any::class.java -> "Any"
                 else -> elementType.simpleName
             }
-            builder.append(".grid<$typeName>(\n")
+            val nullableSuffix = if (elementNullable) "?" else ""
+            builder.append(".grid<$typeName$nullableSuffix>(\n")
         } else {
             builder.append(".grid(\n")
         }
@@ -738,7 +759,8 @@ class Grid<T> constructor(
         fun <T> of(width: Int, height: Int, defaultValue: T?): Grid<T> {
             val data = Array<Any?>(width * height) { defaultValue }
             val elementType: Class<*>? = defaultValue?.let { it::class.java }
-            return Grid(width, height, data, elementType)
+            val elementNullable = defaultValue == null
+            return Grid(width, height, data, elementType, elementNullable)
         }
 
         /**
@@ -749,7 +771,7 @@ class Grid<T> constructor(
          */
         @JvmStatic
         fun <T> ofNulls(width: Int, height: Int): Grid<T> {
-            return Grid(width, height, Array(width * height) { null }, null)
+            return Grid(width, height, Array(width * height) { null }, null, true)
         }
 
         /**
@@ -776,18 +798,21 @@ class Grid<T> constructor(
 
             val data = Array<Any?>(width * height) { null }
             var elementType: Class<*>? = null
+            var hasNull = false
 
             for (y in 0 until height) {
                 for (x in 0 until width) {
                     val value = rows[y][x]
                     data[y * width + x] = value
-                    if (elementType == null && value != null) {
+                    if (value == null) {
+                        hasNull = true
+                    } else if (elementType == null) {
                         elementType = value!!::class.java
                     }
                 }
             }
 
-            return Grid(width, height, data, elementType)
+            return Grid(width, height, data, elementType, hasNull)
         }
 
         /**
@@ -822,18 +847,21 @@ class Grid<T> constructor(
         inline fun <T> build(width: Int, height: Int, init: (x: Int, y: Int) -> T?): Grid<T> {
             val data = Array<Any?>(width * height) { null }
             var elementType: Class<*>? = null
+            var hasNull = false
 
             for (y in 0 until height) {
                 for (x in 0 until width) {
                     val value = init(x, y)
                     data[y * width + x] = value
-                    if (elementType == null && value != null) {
+                    if (value == null) {
+                        hasNull = true
+                    } else if (elementType == null) {
                         elementType = value!!::class.java
                     }
                 }
             }
 
-            return Grid(width, height, data, elementType)
+            return Grid(width, height, data, elementType, hasNull)
         }
 
         /**

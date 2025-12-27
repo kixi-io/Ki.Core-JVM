@@ -568,7 +568,8 @@ class GridTest : StringSpec({
         )
 
         val str = grid.toString()
-        str.contains(".grid(") shouldBe true
+        // Grid.fromRows infers elementType, so type parameter is included
+        str.contains(".grid<Int>") shouldBe true
         str.contains("1") shouldBe true
         str.contains("6") shouldBe true
     }
@@ -654,5 +655,119 @@ class GridTest : StringSpec({
         col.index shouldBe 2
         col.columnLetter shouldBe "C"
         col.size shouldBe 3
+    }
+
+    // ===== Nullability Tests =====
+
+    "of with non-null default has elementNullable=false" {
+        val grid = Grid.of(3, 3, 42)
+        grid.elementNullable shouldBe false
+        grid.elementType shouldBe Int::class.javaObjectType
+    }
+
+    "of with null default has elementNullable=true" {
+        val grid = Grid.of<Int>(3, 3, null)
+        grid.elementNullable shouldBe true
+    }
+
+    "ofNulls has elementNullable=true" {
+        val grid = Grid.ofNulls<Int>(3, 3)
+        grid.elementNullable shouldBe true
+    }
+
+    "fromRows with no nulls has elementNullable=false" {
+        val grid = Grid.fromRows(
+            listOf(1, 2, 3),
+            listOf(4, 5, 6)
+        )
+        grid.elementNullable shouldBe false
+    }
+
+    "fromRows with nulls has elementNullable=true" {
+        val grid = Grid.fromRows(
+            listOf<Int?>(1, null, 3),
+            listOf<Int?>(4, 5, 6)
+        )
+        grid.elementNullable shouldBe true
+    }
+
+    "build with no nulls has elementNullable=false" {
+        val grid = Grid.build(3, 3) { x, y -> x + y }
+        grid.elementNullable shouldBe false
+    }
+
+    "build with nulls has elementNullable=true" {
+        val grid = Grid.build(3, 3) { x, y ->
+            if (x == 1 && y == 1) null else x + y
+        }
+        grid.elementNullable shouldBe true
+    }
+
+    "copy preserves elementNullable" {
+        val grid1 = Grid.fromRows(
+            listOf<Int?>(1, null, 3),
+            listOf<Int?>(4, 5, 6)
+        )
+        val grid2 = grid1.copy()
+        grid2.elementNullable shouldBe true
+    }
+
+    "transpose preserves elementNullable" {
+        val grid = Grid.fromRows(
+            listOf<Int?>(1, null, 3),
+            listOf<Int?>(4, 5, 6)
+        )
+        val transposed = grid.transpose()
+        transposed.elementNullable shouldBe true
+    }
+
+    "subgrid detects nullability in region" {
+        val grid = Grid.fromRows(
+            listOf<Int?>(1, 2, 3),
+            listOf<Int?>(4, null, 6),
+            listOf<Int?>(7, 8, 9)
+        )
+
+        // Subgrid with null
+        val sub1 = grid.subgrid(1, 1, 2, 2)
+        sub1.elementNullable shouldBe true
+
+        // Subgrid without null
+        val sub2 = grid.subgrid(0, 0, 2, 1)
+        sub2.elementNullable shouldBe false
+    }
+
+    "map detects nullability from transformed values" {
+        val grid = Grid.fromRows(
+            listOf(1, 2, 3),
+            listOf(4, 5, 6)
+        )
+
+        // Map with nulls
+        val mapped1 = grid.map { if (it == 2) null else it }
+        mapped1.elementNullable shouldBe true
+
+        // Map without nulls
+        val mapped2 = grid.map { (it ?: 0) * 2 }
+        mapped2.elementNullable shouldBe false
+    }
+
+    "toKiLiteral includes nullable suffix when elementNullable=true" {
+        val grid = Grid.fromRows(
+            listOf<Int?>(1, null, 3),
+            listOf<Int?>(4, 5, 6)
+        )
+        val str = grid.toKiLiteral()
+        str.contains(".grid<Int?>") shouldBe true
+    }
+
+    "toKiLiteral excludes nullable suffix when elementNullable=false" {
+        val grid = Grid.fromRows(
+            listOf(1, 2, 3),
+            listOf(4, 5, 6)
+        )
+        val str = grid.toKiLiteral()
+        str.contains(".grid<Int>") shouldBe true
+        str.contains(".grid<Int?>") shouldBe false
     }
 })
