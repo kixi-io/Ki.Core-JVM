@@ -305,3 +305,56 @@ class GridDef(
         return value.all { elementDef.matches(it) }
     }
 }
+
+/**
+ * Type definition for currency quantities.
+ *
+ * Represents a typed currency quantity definition such as `Quantity<Currency>` or
+ * `Quantity<Currency>?`. This allows type checking to distinguish currency quantities
+ * from other quantity types in schemas.
+ *
+ * Unlike [QuantityDef] which specifies a specific unit type and number type,
+ * CurrencyDef matches any currency unit (USD, EUR, BTC, etc.) with any number type.
+ *
+ * ## Examples
+ * ```kotlin
+ * val currencyDef = CurrencyDef(nullable = false)
+ * currencyDef.matches(Quantity(100, Unit.USD))  // true
+ * currencyDef.matches(Quantity(50.25, Unit.EUR))  // true
+ * currencyDef.matches(Quantity(5, Unit.m))  // false - not a currency
+ * ```
+ *
+ * @see Currency
+ * @see Quantity
+ * @see QuantityDef
+ */
+class CurrencyDef(
+    nullable: Boolean
+) : TypeDef(Type.Quantity, nullable) {
+    private val nullChar = if (nullable) "?" else ""
+
+    override fun toString() = "$type<Currency>$nullChar"
+
+    override fun hashCode(): Int {
+        var result = type.hashCode()
+        result = 31 * result + nullable.hashCode()
+        return result
+    }
+
+    override fun equals(other: kotlin.Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+
+        other as CurrencyDef
+        return other.type == type && other.nullable == nullable
+    }
+
+    override val generic: Boolean get() = true
+
+    override fun matches(value: kotlin.Any?): Boolean {
+        if (value == null) return nullable
+        if (value !is Quantity<*>) return false
+
+        return value.unit is Currency
+    }
+}

@@ -210,6 +210,49 @@ abstract class Unit(
         // TODO: Derived acceleration, force, pressure, energy, power, charge,
         //       potential delta, resistance, conductance and capacitance
 
+        /* Currencies -------- */
+
+        /**
+         * Helper method to register a currency and its prefix symbol.
+         */
+        private fun addCurrency(currency: Currency): Currency {
+            addUnit(currency)
+            Currency.registerPrefix(currency)
+            return currency
+        }
+
+        // Fiat Currencies (Top 12 by usage)
+        /** US Dollar */
+        val USD = addCurrency(Currency("USD", '$', "US Dollar"))
+        /** Euro */
+        val EUR = addCurrency(Currency("EUR", '€', "Euro"))
+        /** Japanese Yen */
+        val JPY = addCurrency(Currency("JPY", '¥', "Japanese Yen"))
+        /** British Pound */
+        val GBP = addCurrency(Currency("GBP", '£', "British Pound"))
+        /** Chinese Yuan */
+        val CNY = addCurrency(Currency("CNY", currencyName = "Chinese Yuan"))
+        /** Australian Dollar */
+        val AUD = addCurrency(Currency("AUD", currencyName = "Australian Dollar"))
+        /** Canadian Dollar */
+        val CAD = addCurrency(Currency("CAD", currencyName = "Canadian Dollar"))
+        /** Swiss Franc */
+        val CHF = addCurrency(Currency("CHF", currencyName = "Swiss Franc"))
+        /** Hong Kong Dollar */
+        val HKD = addCurrency(Currency("HKD", currencyName = "Hong Kong Dollar"))
+        /** Singapore Dollar */
+        val SGD = addCurrency(Currency("SGD", currencyName = "Singapore Dollar"))
+        /** Indian Rupee */
+        val INR = addCurrency(Currency("INR", currencyName = "Indian Rupee"))
+        /** South Korean Won */
+        val KRW = addCurrency(Currency("KRW", currencyName = "South Korean Won"))
+
+        // Cryptocurrencies
+        /** Bitcoin */
+        val BTC = addCurrency(Currency("BTC", '₿', "Bitcoin"))
+        /** Ether (Ethereum) */
+        val ETH = addCurrency(Currency("ETH", 'Ξ', "Ether"))
+
         /**
          * Retrieves a unit by its symbol, handling common aliases and ASCII alternatives.
          *
@@ -242,6 +285,24 @@ abstract class Unit(
 
             return UNITS[key]
         }
+
+        /**
+         * Retrieves a currency unit by its prefix symbol.
+         *
+         * @param prefix The currency prefix symbol (e.g., '$', '€', '¥')
+         * @return The matching Currency, or null if not found
+         */
+        @JvmStatic
+        fun getCurrencyByPrefix(prefix: Char): Currency? = Currency.fromPrefix(prefix)
+
+        /**
+         * Checks if a character is a valid currency prefix symbol.
+         *
+         * @param ch The character to check
+         * @return true if the character is a currency prefix symbol
+         */
+        @JvmStatic
+        fun isCurrencyPrefix(ch: Char): Boolean = Currency.isPrefixSymbol(ch)
 
         /**
          * Registers a new unit in the unit registry.
