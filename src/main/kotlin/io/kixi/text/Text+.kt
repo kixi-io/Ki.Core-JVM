@@ -183,29 +183,35 @@ fun String.resolveEscapes(quoteChar: Char? = '"'): String {
 // works for now. It handles Unicode BMP emoji.
 
 /**
- * Returns true for any unicode letter, '_', '$' or emoji.
+ * Returns true for any unicode letter, '_', or emoji.
+ * Note: '$' is NOT allowed at the start of identifiers to avoid
+ * ambiguity with currency prefix notation ($100, €50, etc.)
  *
  * TODO: Fix - Currently only handles BMP emoji.
  */
-fun Char.isKiIDStart(): Boolean = this.isLetter() || this=='_' || this=='$' ||
+fun Char.isKiIDStart(): Boolean = this.isLetter() || this=='_' ||
         this.isSurrogate()
 
 /**
  * Returns true for any unicode letter, digit, '_', '$' or emoji.
+ * Note: '$' is allowed in identifiers, just not at the start.
  *
  * TODO: Fix - Currently only handles BMP emoji.
  */
 fun Char.isKiIDChar(): Boolean = this.isKiIDStart() || this.isDigit() ||
-        this.isSurrogate()
+        this == '$' || this.isSurrogate()
 
 /**
  * Checks whether this CharSequence is a valid Ki identifier.
  *
  * A valid Ki identifier must:
  * - Be non-empty
- * - Start with a letter, underscore, dollar sign, or emoji
+ * - Start with a letter, underscore, or emoji
  * - Contain only letters, digits, underscores, dollar signs, or emoji
  * - Not be a single underscore (reserved)
+ *
+ * Note: '$' can appear anywhere in an identifier except the first position,
+ * to avoid ambiguity with currency prefix notation.
  *
  * @return true if this is a valid Ki identifier
  */

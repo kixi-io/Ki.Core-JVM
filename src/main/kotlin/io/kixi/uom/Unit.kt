@@ -213,11 +213,16 @@ abstract class Unit(
         /* Currencies -------- */
 
         /**
-         * Helper method to register a currency and its prefix symbol.
+         * Helper method to register a currency.
+         *
+         * Note: This method does NOT call Currency.registerPrefix() to avoid
+         * circular initialization issues. The prefix map is populated lazily
+         * in Currency.ensurePrefixesInitialized() when first needed.
          */
         private fun addCurrency(currency: Currency): Currency {
             addUnit(currency)
-            Currency.registerPrefix(currency)
+            // Do NOT call Currency.registerPrefix here - it causes circular init issues
+            // Prefix registration is handled lazily in Currency.ensurePrefixesInitialized()
             return currency
         }
 

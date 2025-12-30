@@ -154,8 +154,8 @@ class TextExtensionsTest : FunSpec({
             '_'.isKiIDStart() shouldBe true
         }
 
-        test("dollar sign is valid start") {
-            '$'.isKiIDStart() shouldBe true
+        test("dollar sign is NOT valid start (reserved for currency prefix)") {
+            '$'.isKiIDStart() shouldBe false
         }
 
         test("unicode letters are valid") {
@@ -202,8 +202,12 @@ class TextExtensionsTest : FunSpec({
             "_private".isKiIdentifier() shouldBe true
         }
 
-        test("starts with dollar") {
-            "\$special".isKiIdentifier() shouldBe true
+        test("starts with dollar is NOT valid (reserved for currency prefix)") {
+            "\$special".isKiIdentifier() shouldBe false
+        }
+
+        test("dollar in middle is valid") {
+            "my\$var".isKiIdentifier() shouldBe true
         }
 
         test("unicode identifier") {

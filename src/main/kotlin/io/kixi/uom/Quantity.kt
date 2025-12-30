@@ -14,7 +14,7 @@ import java.math.BigDecimal as Dec
  * ```
  *   5cm
  *   23.5kg
- *   235cmÂ³:L    // 235 cubic centimeters represented as a Long
+ *   235cmÃ‚Â³:L    // 235 cubic centimeters represented as a Long
  *   1_000_000m  // underscores for readability
  * ```
  *
@@ -27,19 +27,19 @@ import java.math.BigDecimal as Dec
  * ### Option 1: Parentheses Style
  * Use parentheses around the exponent to include a sign:
  * ```
- *   5.5e(8)km       // 5.5 Ã— 10â¸ km (550 million km)
- *   5.5e(-7)m       // 5.5 Ã— 10â»â· m (550 nanometers)
- *   9.109e(-31)kg   // 9.109 Ã— 10â»Â³Â¹ kg (electron mass)
- *   6.022e(23)mol   // 6.022 Ã— 10Â²Â³ mol (Avogadro's number)
+ *   5.5e(8)km       // 5.5 Ãƒâ€” 10Ã¢ÂÂ¸ km (550 million km)
+ *   5.5e(-7)m       // 5.5 Ãƒâ€” 10Ã¢ÂÂ»Ã¢ÂÂ· m (550 nanometers)
+ *   9.109e(-31)kg   // 9.109 Ãƒâ€” 10Ã¢ÂÂ»Ã‚Â³Ã‚Â¹ kg (electron mass)
+ *   6.022e(23)mol   // 6.022 Ãƒâ€” 10Ã‚Â²Ã‚Â³ mol (Avogadro's number)
  * ```
  *
  * ### Option 2: Letter Style (n/p)
  * Use `n` for negative exponent, `p` for positive (p is optional for positive):
  * ```
- *   5.5e8km         // 5.5 Ã— 10â¸ km (positive, no letter needed)
- *   5.5ep8km        // 5.5 Ã— 10â¸ km (explicit positive with 'p')
- *   5.5en7m         // 5.5 Ã— 10â»â· m (negative with 'n')
- *   9.109en31kg     // 9.109 Ã— 10â»Â³Â¹ kg
+ *   5.5e8km         // 5.5 Ãƒâ€” 10Ã¢ÂÂ¸ km (positive, no letter needed)
+ *   5.5ep8km        // 5.5 Ãƒâ€” 10Ã¢ÂÂ¸ km (explicit positive with 'p')
+ *   5.5en7m         // 5.5 Ãƒâ€” 10Ã¢ÂÂ»Ã¢ÂÂ· m (negative with 'n')
+ *   9.109en31kg     // 9.109 Ãƒâ€” 10Ã¢ÂÂ»Ã‚Â³Ã‚Â¹ kg
  * ```
  *
  * Both styles can be combined with type specifiers:
@@ -108,7 +108,7 @@ class Quantity<T : Unit> : Comparable<Quantity<T>> {
             is Long -> ":L"
             is Double -> ":d"
             is Float -> ":f"
-            // is Int -> ":i"
+            is Int -> ":i"
             else -> ""
         }
 
@@ -132,7 +132,7 @@ class Quantity<T : Unit> : Comparable<Quantity<T>> {
      * a non-whole number and the value is Int or Long, the result will be promoted to Dec.
      *
      * For temperature conversions, this properly handles the offset between
-     * Celsius and Kelvin (e.g., 0Â°C = 273.15K).
+     * Celsius and Kelvin (e.g., 0Ã‚Â°C = 273.15K).
      *
      * @param otherUnit The target unit (must be of the same dimension)
      * @return A new Quantity with the converted value and target unit
@@ -689,11 +689,11 @@ class Quantity<T : Unit> : Comparable<Quantity<T>> {
          * Normalizes Ki scientific notation to standard Java format.
          *
          * Converts:
-         * - `5.5e(-7)` â†’ `5.5e-7`
-         * - `5.5e(8)` â†’ `5.5e8`
-         * - `5.5en7` â†’ `5.5e-7`
-         * - `5.5ep8` â†’ `5.5e8`
-         * - `5.5e8` â†’ `5.5e8` (unchanged)
+         * - `5.5e(-7)` Ã¢â€ â€™ `5.5e-7`
+         * - `5.5e(8)` Ã¢â€ â€™ `5.5e8`
+         * - `5.5en7` Ã¢â€ â€™ `5.5e-7`
+         * - `5.5ep8` Ã¢â€ â€™ `5.5e8`
+         * - `5.5e8` Ã¢â€ â€™ `5.5e8` (unchanged)
          */
         private fun normalizeScientificNotation(text: String): String {
             // Handle parentheses style: e(-7) or e(8)
@@ -777,22 +777,22 @@ class Quantity<T : Unit> : Comparable<Quantity<T>> {
         /** Creates a Length quantity from a literal string (e.g., "5cm", "100m"). */
         fun length(text: String) = Quantity<Length>(text)
 
-        /** Creates an Area quantity from a literal string (e.g., "25mÂ²", "100cm2"). */
+        /** Creates an Area quantity from a literal string (e.g., "25mÃ‚Â²", "100cm2"). */
         fun area(text: String) = Quantity<Area>(text)
 
-        /** Creates a Volume quantity from a literal string (e.g., "500mâ„“", "1mÂ³"). */
+        /** Creates a Volume quantity from a literal string (e.g., "500mÃ¢â€žâ€œ", "1mÃ‚Â³"). */
         fun volume(text: String) = Quantity<Volume>(text)
 
         /** Creates a Mass quantity from a literal string (e.g., "75kg", "500g"). */
         fun mass(text: String) = Quantity<Mass>(text)
 
-        /** Creates a Temperature quantity from a literal string (e.g., "25Â°C", "300K"). */
+        /** Creates a Temperature quantity from a literal string (e.g., "25Ã‚Â°C", "300K"). */
         fun temperature(text: String) = Quantity<Temperature>(text)
 
         /** Creates a Speed quantity from a literal string (e.g., "100kph", "30mps"). */
         fun speed(text: String) = Quantity<Speed>(text)
 
-        /** Creates a Density quantity from a literal string (e.g., "1000kgpmÂ³"). */
+        /** Creates a Density quantity from a literal string (e.g., "1000kgpmÃ‚Â³"). */
         fun density(text: String) = Quantity<Density>(text)
 
         /** Creates a Time quantity from a literal string (e.g., "30s", "5min"). */

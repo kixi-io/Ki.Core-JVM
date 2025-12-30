@@ -52,9 +52,15 @@ class NSIDTest : FunSpec({
             nsid.name shouldBe "my_tag"
         }
 
-        test("allows dollar sign in name") {
-            val nsid = NSID("\$special")
-            nsid.name shouldBe "\$special"
+        test("throws on dollar sign at start of name (reserved for currency prefix)") {
+            shouldThrow<ParseException> {
+                NSID("\$special")
+            }
+        }
+
+        test("allows dollar sign in middle of name") {
+            val nsid = NSID("my\$var")
+            nsid.name shouldBe "my\$var"
         }
 
         test("allows unicode letters in name") {

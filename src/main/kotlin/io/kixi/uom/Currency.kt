@@ -17,7 +17,7 @@ import java.math.BigDecimal as Dec
  * ```kotlin
  * val a = Quantity(100, Currency.USD)
  * val b = Quantity(50, Currency.USD)
- * val sum = a + b  // 150USD ✓
+ * val sum = a + b  // 150USD ✔
  *
  * val c = Quantity(100, Currency.EUR)
  * val mixed = a + c  // throws IncompatibleUnitsException ✗
@@ -129,6 +129,9 @@ class Currency(
         /**
          * Map of prefix symbols to their corresponding currencies.
          * Used for parsing prefix notation like $100, €50, etc.
+         *
+         * This map is populated lazily in [ensurePrefixesInitialized] to avoid
+         * circular initialization issues with the [Unit] companion object.
          */
         private val PREFIX_MAP = mutableMapOf<Char, Currency>()
 
@@ -149,26 +152,27 @@ class Currency(
             synchronized(PREFIX_MAP) {
                 if (PREFIXES_INITIALIZED) return
                 try {
-                    // Touch standard currencies; triggers Unit companion init,
-                    // which calls Currency.registerPrefix(...) during registration.
-                    Unit.USD
-                    Unit.EUR
-                    Unit.JPY
-                    Unit.GBP
-                    Unit.BTC
-                    Unit.ETH
+                    // Touch standard currencies to trigger Unit companion init,
+                    // then register their prefixes. This order is important:
+                    // we must NOT call registerPrefix from Unit's addCurrency
+                    // to avoid circular initialization issues.
+                    val currenciesWithPrefixes = listOf(
+                        Unit.USD,
+                        Unit.EUR,
+                        Unit.JPY,
+                        Unit.GBP,
+                        Unit.BTC,
+                        Unit.ETH
+                    )
+
+                    // Now that Unit is initialized, populate PREFIX_MAP
+                    for (currency in currenciesWithPrefixes) {
+                        currency.prefixSymbol?.let { PREFIX_MAP[it] = currency }
+                    }
                 } finally {
                     PREFIXES_INITIALIZED = true
                 }
             }
-        }
-
-        /**
-         * Registers a currency's prefix symbol for lookup.
-         * Called by Unit.addCurrency() when registering currencies.
-         */
-        internal fun registerPrefix(currency: Currency) {
-            currency.prefixSymbol?.let { PREFIX_MAP[it] = currency }
         }
 
         /**
