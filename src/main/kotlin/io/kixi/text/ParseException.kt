@@ -1,5 +1,7 @@
 package io.kixi.text
 
+import io.kixi.KiException
+
 /**
  * A ParseException represents a problem encountered while parsing text.
  *
@@ -20,13 +22,15 @@ open class ParseException
  * @param line Int
  * @param index Int Index within the line
  * @param cause Throwable?
+ * @param suggestion String? Optional suggestion to help resolve the error
  * @constructor
  */ @JvmOverloads constructor(
     message: String,
     private var line: Int = -1,
     private var index: Int = -1,
-    cause: Throwable? = null
-) : RuntimeException(message, cause) {
+    cause: Throwable? = null,
+    suggestion: String? = null,
+) : KiException(message, suggestion, cause) {
 
     companion object {
 
@@ -36,24 +40,31 @@ open class ParseException
          * @param message String
          * @param index Int Index at which the error occurs
          * @param cause Throwable?
+         * @param suggestion String? Optional suggestion to help resolve the error
          * @constructor
          */
         @JvmOverloads
-        fun line(message:String, index:Int = -1, cause:Throwable? = null): ParseException {
-            return ParseException(message, -1, index, cause)
+        fun line(
+            message: String,
+            index: Int = -1,
+            cause: Throwable? = null,
+            suggestion: String? = null
+        ): ParseException {
+            return ParseException(message, -1, index, cause, suggestion)
         }
     }
 
     override val message: String get() {
-        var msg : String = if(super.message.isNullOrEmpty()) this::class.simpleName!!
-            else "${this::class.simpleName} \"${super.message}\""
+        var msg: String = if (super.message.isNullOrEmpty()) this::class.simpleName!!
+        else "${this::class.simpleName} \"${super.message}\""
 
-        if(line!=-1) msg+= " line: $line"
-        if(index!=-1) msg+= " index: $index"
-        if(cause!=null) msg+= " cause: ${super.cause!!.message}"
+        if (line != -1) msg += " line: $line"
+        if (index != -1) msg += " index: $index"
+        if (cause != null) msg += " cause: ${super.cause!!.message}"
+        if (suggestion != null) msg += " Suggestion: $suggestion"
 
         return msg
     }
 
-    override fun toString() : String = message
+    override fun toString(): String = message
 }

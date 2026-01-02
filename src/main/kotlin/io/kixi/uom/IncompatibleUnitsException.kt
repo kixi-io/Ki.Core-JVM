@@ -1,6 +1,6 @@
 package io.kixi.uom
 
-import java.lang.RuntimeException
+import io.kixi.KiException
 
 /**
  * Thrown when attempting to convert or compare units of different dimensions.
@@ -10,6 +10,14 @@ import java.lang.RuntimeException
  *
  * @param from The source unit
  * @param to The target unit that is incompatible with the source
+ * @param suggestion Optional suggestion to help resolve the error
  */
-class IncompatibleUnitsException(from: Unit, to: Unit) :
-    RuntimeException("Can't convert from ${from::class.java.simpleName} to ${to::class.java.simpleName}")
+class IncompatibleUnitsException @JvmOverloads constructor(
+    from: Unit,
+    to: Unit,
+    suggestion: String? = "Only units of the same dimension can be converted. " +
+            "For example, meters to kilometers (both Length), or grams to kilograms (both Mass)."
+) : KiException(
+    "Can't convert from ${from::class.java.simpleName} to ${to::class.java.simpleName}",
+    suggestion
+)

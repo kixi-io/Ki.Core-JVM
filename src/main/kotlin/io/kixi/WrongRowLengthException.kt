@@ -30,11 +30,15 @@ class WrongRowLengthException(
     val actualLength: Int,
     val rowIndex: Int,
     line: Int = -1,
-    index: Int = -1
+    index: Int = -1,
+    cause: Throwable? = null,
+    suggestion: String? = null
 ) : ParseException(
     "Row $rowIndex has $actualLength columns, expected $expectedLength",
     line,
-    index
+    index,
+    cause,
+    suggestion ?: "Ensure all rows in the grid have exactly $expectedLength columns to match the first row."
 ) {
     companion object {
         /**
