@@ -22,6 +22,18 @@ open class Call {
 
     var nsid: NSID
 
+    /**
+     * Convenience property that returns the name component of the NSID.
+     * Equivalent to `nsid.name`.
+     */
+    val name: String get() = nsid.name
+
+    /**
+     * Convenience property that returns the namespace component of the NSID.
+     * Equivalent to `nsid.namespace`.
+     */
+    val namespace: String get() = nsid.namespace
+
     // Backing fields for lazy initialization
     private var _values: MutableList<Any?>? = null
     private var _attributes: MutableMap<NSID, Any?>? = null
@@ -197,7 +209,7 @@ open class Call {
     /**
      * Returns true if a value exists at the given index.
      */
-    fun hasValue(index: Int): Boolean = index >= 0 && index < valueCount
+    fun hasValue(index: Int): Boolean = index in 0..<valueCount
 
     /**
      * Gets a value at the given index, or returns the default if the index is out of bounds.
@@ -269,7 +281,7 @@ open class Call {
     fun <T> getAttributesInNamespace(namespace: String): Map<String, T> {
         if (_attributes == null) {
             // @Suppress("UNCHECKED_CAST")
-            return emptyMap<String, T>() as Map<String, T>
+            return emptyMap<String, T>()
         }
 
         val map = HashMap<String, Any?>()
