@@ -32,6 +32,18 @@ open class ParseException
     suggestion: String? = null,
 ) : KiException(message, suggestion, cause) {
 
+    /**
+     * The raw error message as provided to the constructor, stored separately
+     * to avoid the double-suggestion bug.
+     *
+     * [KiException.message] appends "Suggestion: ..." to its output. If this
+     * class's [message] override called `super.message` and then appended the
+     * suggestion again, it would appear twice. By storing the raw message here
+     * and building our formatted output from it directly, each piece of
+     * information appears exactly once.
+     */
+    private val rawMessage: String = message
+
     companion object {
 
         /**
@@ -55,12 +67,12 @@ open class ParseException
     }
 
     override val message: String get() {
-        var msg: String = if (super.message.isNullOrEmpty()) this::class.simpleName!!
-        else "${this::class.simpleName} \"${super.message}\""
+        var msg: String = if (rawMessage.isEmpty()) this::class.simpleName!!
+        else "${this::class.simpleName} \"$rawMessage\""
 
         if (line != -1) msg += " line: $line"
         if (index != -1) msg += " index: $index"
-        if (cause != null) msg += " cause: ${super.cause!!.message}"
+        if (cause != null) msg += " cause: ${cause!!.message}"
         if (suggestion != null) msg += " Suggestion: $suggestion"
 
         return msg

@@ -9,7 +9,7 @@ plugins {
 }
 
 group = "io.kixi"
-version = "2.3.0"
+version = "2.3.1"
 description = "ki-core"
 
 repositories {
