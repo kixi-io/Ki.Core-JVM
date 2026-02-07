@@ -123,6 +123,53 @@ class Currency(
      */
     val isFiat: Boolean get() = !isCrypto
 
+    /**
+     * The default display suffix for this currency.
+     *
+     * For the six currencies with prefix symbols, this returns the prefix
+     * symbol (e.g., `"$"`, `"€"`, `"¥"`, `"£"`, `"₿"`, `"Ξ"`).
+     * For all other currencies, this returns the three-letter ISO code
+     * (e.g., `"CAD"`, `"CHF"`, `"INR"`).
+     *
+     * ```kotlin
+     * Currency.USD.currencySuffix  // "$"
+     * Currency.CAD.currencySuffix  // "CAD"
+     * Currency.BTC.currencySuffix  // "₿"
+     * ```
+     *
+     * @see currencyString for the three-letter code regardless of prefix
+     */
+    val currencySuffix: String get() = prefixSymbol?.toString() ?: symbol
+
+    /**
+     * The three-letter ISO 4217 code for this currency, always in suffix form.
+     *
+     * Unlike [currencySuffix], this always returns the three-letter code even
+     * for currencies that have prefix symbols. Useful when you need the
+     * explicit suffix form for serialization or display consistency.
+     *
+     * ```kotlin
+     * Currency.USD.currencyString  // "USD"
+     * Currency.USD.currencySuffix  // "$"
+     * Currency.CAD.currencyString  // "CAD"
+     * Currency.CAD.currencySuffix  // "CAD"
+     * ```
+     *
+     * @see currencySuffix for the default display form
+     */
+    val currencyString: String get() = symbol
+
+    /**
+     * Formats a quantity with this currency unit.
+     *
+     * For currencies with prefix symbols ($, €, ¥, £, ₿, Ξ), uses prefix
+     * notation: `$23.53`, `€50.25`. All other currencies use standard suffix
+     * notation: `100CAD`, `250CHF`.
+     */
+    override fun formatQuantity(valueText: String, numType: String): String =
+        if (prefixSymbol != null) "$prefixSymbol$valueText$numType"
+        else "$valueText$symbol$numType"
+
     override fun toString(): String = symbol
 
     companion object {

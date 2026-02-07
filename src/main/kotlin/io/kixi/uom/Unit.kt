@@ -46,6 +46,20 @@ abstract class Unit(
     override fun hashCode(): Int = symbol.hashCode() or 31
 
     /**
+     * Formats a quantity value with this unit for display.
+     *
+     * The default implementation produces suffix notation: `"23cm:i"`, `"3.14kg"`.
+     * Subclasses may override to provide alternate formatting (e.g., prefix notation
+     * for currencies).
+     *
+     * @param valueText The formatted numeric value (e.g., "23.53", "100")
+     * @param numType The number type suffix (e.g., ":L", ":d", ":i", or "")
+     * @return The formatted quantity string
+     */
+    open fun formatQuantity(valueText: String, numType: String): String =
+        "$valueText$symbol$numType"
+
+    /**
      * The number by which you multiply to get a conversion to the target unit.
      * For example, `Unit.cm.factorTo(Unit.mm)` is `10`.
      *

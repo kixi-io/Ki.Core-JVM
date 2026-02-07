@@ -122,7 +122,39 @@ class Quantity<T : Unit> : Comparable<Quantity<T>> {
             else -> value.toString()
         }
 
-        return "$valueText$unit$numType"
+        return unit.formatQuantity(valueText, numType)
+    }
+
+    /**
+     * Returns the quantity formatted with standard suffix notation, even for
+     * currencies that normally display with a prefix symbol.
+     *
+     * For non-currency quantities, this returns the same as [toString].
+     *
+     * ```kotlin
+     * Quantity(23.53, Currency.USD).toString()         // "$23.53"
+     * Quantity(23.53, Currency.USD).toSuffixString()   // "23.53USD"
+     * Quantity(100, Unit.cm).toSuffixString()          // "100cm:i"
+     * ```
+     */
+    fun toSuffixString(): String {
+        val numType = when (value) {
+            is Long -> ":L"
+            is Double -> ":d"
+            is Float -> ":f"
+            is Int -> ":i"
+            else -> ""
+        }
+
+        val valueText = when (value) {
+            is Dec -> {
+                val stripped = (value as Dec).stripTrailingZeros()
+                stripped.toPlainString()
+            }
+            else -> value.toString()
+        }
+
+        return "$valueText${unit.symbol}$numType"
     }
 
     /**
