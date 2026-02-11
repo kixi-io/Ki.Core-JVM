@@ -209,9 +209,11 @@ class RangeDef(nullable: Boolean, val valueDef: TypeDef) : TypeDef(Type.Range, n
 
     override fun matches(value: kotlin.Any?): Boolean {
         if (value == null) return nullable
+        if (value !is Range<*>) return false
 
-        return value is Range<*> && (value.left::class == valueDef.type.kclass ||
-                type.isAssignableFrom(Type.typeOf(value.left)!!))
+        val sample = value.start ?: value.end!!
+        return sample::class == valueDef.type.kclass ||
+                type.isAssignableFrom(Type.typeOf(sample)!!)
     }
 }
 
