@@ -5,8 +5,8 @@ import io.kixi.text.ParseException
 /**
  * A Ki Range represents a bounded or open-ended interval over comparable values.
  *
- * Ranges support four exclusivity modes (via [RangeType]) and work with any
- * comparable type (Int, Long, Double, String, Char, etc.). Open ends are
+ * Ranges support four exclusivity modes (via [Bound]) and work with any
+ * comparable bound (Int, Long, Double, String, Char, etc.). Open ends are
  * represented by null. Reversed ranges (e.g. `5..1`) represent downward
  * progressions.
  *
@@ -29,19 +29,19 @@ import io.kixi.text.ParseException
  *
  * ## Design Notes
  *
- * - Open ends are represented as `null` \u2014 no sentinel values or separate enum
+ * - Open ends are represented as `nil` \u2014 no sentinel values or separate enum
  * - No compile-time `Comparable` bound on `T` to allow `Range<Any?>` in dynamic
  *   contexts; comparison is checked at runtime
  * - Cross-platform: identical API on JVM, .NET, and Swift
  *
  * @param start The start of the range, or null for left-open ranges
  * @param end The end of the range, or null for right-open ranges
- * @param type The exclusivity mode for the range boundaries
+ * @param bound The exclusivity mode for the range boundaries
  */
 data class Range<T>(
     val start: T?,
     val end: T?,
-    val type: RangeType = RangeType.Inclusive
+    val bound: Bound = Bound.Inclusive
 ) {
 
     /**
@@ -52,7 +52,7 @@ data class Range<T>(
      *     ExclusiveStart: <..   start < x <= end
      *     ExclusiveEnd:   ..<   start <= x < end
      */
-    enum class RangeType(val operator: String) {
+    enum class Bound(val operator: String) {
         Inclusive(".."),
         Exclusive("<..<"),
         ExclusiveStart("<.."),
@@ -67,15 +67,15 @@ data class Range<T>(
 
         // Can't exclude a boundary that doesn't exist
         if (start == null) {
-            require(type == RangeType.Inclusive || type == RangeType.ExclusiveEnd) {
+            require(bound == Bound.Inclusive || bound == Bound.ExclusiveEnd) {
                 "Open-start ranges can only use Inclusive (..) or ExclusiveEnd (..<), " +
-                        "not $type (cannot exclude a boundary that doesn't exist)"
+                        "not $bound (cannot exclude a boundary that doesn't exist)"
             }
         }
         if (end == null) {
-            require(type == RangeType.Inclusive || type == RangeType.ExclusiveStart) {
+            require(bound == Bound.Inclusive || bound == Bound.ExclusiveStart) {
                 "Open-end ranges can only use Inclusive (..) or ExclusiveStart (<..), " +
-                        "not $type (cannot exclude a boundary that doesn't exist)"
+                        "not $bound (cannot exclude a boundary that doesn't exist)"
             }
         }
     }
@@ -146,7 +146,7 @@ data class Range<T>(
         val startOk = if (start == null) {
             true // unbounded below
         } else {
-            val excludeStart = type == RangeType.ExclusiveStart || type == RangeType.Exclusive
+            val excludeStart = bound == Bound.ExclusiveStart || bound == Bound.Exclusive
             if (reversed) {
                 // For reversed ranges (5..1), start is the high end
                 if (excludeStart) compareValues(element, start) < 0
@@ -160,7 +160,7 @@ data class Range<T>(
         val endOk = if (end == null) {
             true // unbounded above
         } else {
-            val excludeEnd = type == RangeType.ExclusiveEnd || type == RangeType.Exclusive
+            val excludeEnd = bound == Bound.ExclusiveEnd || bound == Bound.Exclusive
             if (reversed) {
                 // For reversed ranges (5..1), end is the low end
                 if (excludeEnd) compareValues(element, end) > 0
@@ -198,7 +198,7 @@ data class Range<T>(
         require(isClosed && other.isClosed) {
             "Both ranges must be closed for intersection"
         }
-        require(type == RangeType.Inclusive && other.type == RangeType.Inclusive) {
+        require(bound == Bound.Inclusive && other.bound == Bound.Inclusive) {
             "Both ranges must be inclusive for intersection"
         }
 
@@ -207,7 +207,7 @@ data class Range<T>(
         val newMin = if (compareValues(min!!, other.min!!) >= 0) min!! else other.min!!
         val newMax = if (compareValues(max!!, other.max!!) <= 0) max!! else other.max!!
 
-        return Range(newMin, newMax, RangeType.Inclusive)
+        return Range(newMin, newMax, Bound.Inclusive)
     }
 
     /**
@@ -216,7 +216,7 @@ data class Range<T>(
      */
     fun clamp(value: T): T {
         require(isClosed) { "Cannot clamp to an open range" }
-        require(type == RangeType.Inclusive) { "Cannot clamp to an exclusive range" }
+        require(bound == Bound.Inclusive) { "Cannot clamp to an exclusive range" }
 
         return when {
             compareValues(value, min!!) < 0 -> min!!
@@ -232,7 +232,7 @@ data class Range<T>(
     override fun toString(): String {
         val startStr = if (start == null) "_" else Ki.format(start)
         val endStr = if (end == null) "_" else Ki.format(end)
-        return startStr + type.operator + endStr
+        return startStr + bound.operator + endStr
     }
 
     // ========================================================================
@@ -264,19 +264,19 @@ data class Range<T>(
 
         /** Creates an inclusive range: `start..end`. */
         fun <T> inclusive(start: T, end: T): Range<T> =
-            Range(start, end, RangeType.Inclusive)
+            Range(start, end, Bound.Inclusive)
 
         /** Creates an exclusive range: `start<..<end`. */
         fun <T> exclusive(start: T, end: T): Range<T> =
-            Range(start, end, RangeType.Exclusive)
+            Range(start, end, Bound.Exclusive)
 
         /** Creates a left-open range: `_..end` or `_..<end`. */
-        fun <T> openStart(end: T, type: RangeType = RangeType.Inclusive): Range<T> =
-            Range(null, end, type)
+        fun <T> openStart(end: T, bound: Bound = Bound.Inclusive): Range<T> =
+            Range(null, end, bound)
 
         /** Creates a right-open range: `start.._` or `start<.._`. */
-        fun <T> openEnd(start: T, type: RangeType = RangeType.Inclusive): Range<T> =
-            Range(start, null, type)
+        fun <T> openEnd(start: T, bound: Bound = Bound.Inclusive): Range<T> =
+            Range(start, null, bound)
 
         // ================================================================
         // Int Parsing
@@ -312,22 +312,22 @@ data class Range<T>(
             // Try each pattern in order of specificity
             EXCLUSIVE_PATTERN.matchEntire(trimmed)?.let { match ->
                 val (startStr, endStr) = match.destructured
-                return parseIntComponents(startStr.trim(), endStr.trim(), RangeType.Exclusive)
+                return parseIntComponents(startStr.trim(), endStr.trim(), Bound.Exclusive)
             }
 
             EXCLUSIVE_START_PATTERN.matchEntire(trimmed)?.let { match ->
                 val (startStr, endStr) = match.destructured
-                return parseIntComponents(startStr.trim(), endStr.trim(), RangeType.ExclusiveStart)
+                return parseIntComponents(startStr.trim(), endStr.trim(), Bound.ExclusiveStart)
             }
 
             EXCLUSIVE_END_PATTERN.matchEntire(trimmed)?.let { match ->
                 val (startStr, endStr) = match.destructured
-                return parseIntComponents(startStr.trim(), endStr.trim(), RangeType.ExclusiveEnd)
+                return parseIntComponents(startStr.trim(), endStr.trim(), Bound.ExclusiveEnd)
             }
 
             INCLUSIVE_PATTERN.matchEntire(trimmed)?.let { match ->
                 val (startStr, endStr) = match.destructured
-                return parseIntComponents(startStr.trim(), endStr.trim(), RangeType.Inclusive)
+                return parseIntComponents(startStr.trim(), endStr.trim(), Bound.Inclusive)
             }
 
             throw ParseException(
@@ -336,7 +336,7 @@ data class Range<T>(
         }
 
         private fun parseIntComponents(
-            startStr: String, endStr: String, type: RangeType
+            startStr: String, endStr: String, bound: Bound
         ): Range<Int> {
             val openStart = startStr == "_"
             val openEnd = endStr == "_"
@@ -344,7 +344,7 @@ data class Range<T>(
             try {
                 val start = if (openStart) null else startStr.toInt()
                 val end = if (openEnd) null else endStr.toInt()
-                return Range(start, end, type)
+                return Range(start, end, bound)
             } catch (e: NumberFormatException) {
                 throw ParseException("Invalid integer in range: ${e.message}", cause = e)
             }
@@ -353,9 +353,9 @@ data class Range<T>(
         /**
          * Parses a Ki Range literal string into a `Range<Int>`.
          *
-         * **Note:** Due to type erasure in Kotlin/Java, the [Parseable] interface
-         * implementation only supports parsing Integer ranges. For other types,
-         * use the type-specific factory methods or parse the values separately.
+         * **Note:** Due to bound erasure in Kotlin/Java, the [Parseable] interface
+         * implementation only supports parsing Integer ranges. For other bounds,
+         * use the bound-specific factory methods or parse the values separately.
          */
         override fun parseLiteral(text: String): Range<Int> = parse(text)
 
@@ -389,33 +389,33 @@ data class Range<T>(
 
             EXCLUSIVE_PATTERN.matchEntire(trimmed)?.let { match ->
                 val (startStr, endStr) = match.destructured
-                return parseLongComponents(startStr.trim(), endStr.trim(), RangeType.Exclusive)
+                return parseLongComponents(startStr.trim(), endStr.trim(), Bound.Exclusive)
             }
 
             EXCLUSIVE_START_PATTERN.matchEntire(trimmed)?.let { match ->
                 val (startStr, endStr) = match.destructured
                 return parseLongComponents(
-                    startStr.trim(), endStr.trim(), RangeType.ExclusiveStart
+                    startStr.trim(), endStr.trim(), Bound.ExclusiveStart
                 )
             }
 
             EXCLUSIVE_END_PATTERN.matchEntire(trimmed)?.let { match ->
                 val (startStr, endStr) = match.destructured
                 return parseLongComponents(
-                    startStr.trim(), endStr.trim(), RangeType.ExclusiveEnd
+                    startStr.trim(), endStr.trim(), Bound.ExclusiveEnd
                 )
             }
 
             INCLUSIVE_PATTERN.matchEntire(trimmed)?.let { match ->
                 val (startStr, endStr) = match.destructured
-                return parseLongComponents(startStr.trim(), endStr.trim(), RangeType.Inclusive)
+                return parseLongComponents(startStr.trim(), endStr.trim(), Bound.Inclusive)
             }
 
             throw ParseException("Invalid range format: $trimmed")
         }
 
         private fun parseLongComponents(
-            startStr: String, endStr: String, type: RangeType
+            startStr: String, endStr: String, bound: Bound
         ): Range<Long> {
             val openStart = startStr == "_"
             val openEnd = endStr == "_"
@@ -425,7 +425,7 @@ data class Range<T>(
                 else startStr.removeSuffix("L").removeSuffix("l").toLong()
                 val end = if (openEnd) null
                 else endStr.removeSuffix("L").removeSuffix("l").toLong()
-                return Range(start, end, type)
+                return Range(start, end, bound)
             } catch (e: NumberFormatException) {
                 throw ParseException("Invalid long in range: ${e.message}", cause = e)
             }

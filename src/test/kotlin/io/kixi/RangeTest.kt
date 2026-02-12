@@ -23,27 +23,27 @@ class RangeTest : FunSpec({
 
         test("factory method creates inclusive range") {
             val range = Range.inclusive(1, 10)
-            range.type shouldBe Range.RangeType.Inclusive
+            range.bound shouldBe Range.Bound.Inclusive
         }
     }
 
     context("exclusive ranges") {
         test("exclusive range excludes both endpoints") {
-            val range = Range(0, 5, Range.RangeType.Exclusive)
+            val range = Range(0, 5, Range.Bound.Exclusive)
             (0 in range) shouldBe false
             (5 in range) shouldBe false
             (3 in range) shouldBe true
         }
 
         test("exclusive start includes end, excludes start") {
-            val range = Range(0, 5, Range.RangeType.ExclusiveStart)
+            val range = Range(0, 5, Range.Bound.ExclusiveStart)
             (0 in range) shouldBe false
             (5 in range) shouldBe true
             (3 in range) shouldBe true
         }
 
         test("exclusive end includes start, excludes end") {
-            val range = Range(0, 5, Range.RangeType.ExclusiveEnd)
+            val range = Range(0, 5, Range.Bound.ExclusiveEnd)
             (0 in range) shouldBe true
             (5 in range) shouldBe false
             (3 in range) shouldBe true
@@ -51,7 +51,7 @@ class RangeTest : FunSpec({
 
         test("factory method creates exclusive range") {
             val range = Range.exclusive(1, 10)
-            range.type shouldBe Range.RangeType.Exclusive
+            range.bound shouldBe Range.Bound.Exclusive
         }
     }
 
@@ -74,14 +74,14 @@ class RangeTest : FunSpec({
         }
 
         test("reversed exclusive start") {
-            val range = Range(5, 1, Range.RangeType.ExclusiveStart)
+            val range = Range(5, 1, Range.Bound.ExclusiveStart)
             (5 in range) shouldBe false  // start is excluded
             (1 in range) shouldBe true   // end is included
             (3 in range) shouldBe true
         }
 
         test("reversed exclusive end") {
-            val range = Range(5, 1, Range.RangeType.ExclusiveEnd)
+            val range = Range(5, 1, Range.Bound.ExclusiveEnd)
             (5 in range) shouldBe true   // start is included
             (1 in range) shouldBe false  // end is excluded
             (3 in range) shouldBe true
@@ -109,13 +109,13 @@ class RangeTest : FunSpec({
         }
 
         test("open end with exclusive start (> start)") {
-            val range = Range<Int>(5, null, Range.RangeType.ExclusiveStart)
+            val range = Range<Int>(5, null, Range.Bound.ExclusiveStart)
             (5 in range) shouldBe false  // excluded
             (6 in range) shouldBe true
         }
 
         test("open start with exclusive end (< end)") {
-            val range = Range<Int>(null, 5, Range.RangeType.ExclusiveEnd)
+            val range = Range<Int>(null, 5, Range.Bound.ExclusiveEnd)
             (5 in range) shouldBe false  // excluded
             (4 in range) shouldBe true
         }
@@ -153,20 +153,20 @@ class RangeTest : FunSpec({
         test("invalid exclusivity for open start rejected") {
             // Can't exclude a start that doesn't exist
             shouldThrow<IllegalArgumentException> {
-                Range<Int>(null, 5, Range.RangeType.ExclusiveStart)
+                Range<Int>(null, 5, Range.Bound.ExclusiveStart)
             }
             shouldThrow<IllegalArgumentException> {
-                Range<Int>(null, 5, Range.RangeType.Exclusive)
+                Range<Int>(null, 5, Range.Bound.Exclusive)
             }
         }
 
         test("invalid exclusivity for open end rejected") {
             // Can't exclude an end that doesn't exist
             shouldThrow<IllegalArgumentException> {
-                Range<Int>(5, null, Range.RangeType.ExclusiveEnd)
+                Range<Int>(5, null, Range.Bound.ExclusiveEnd)
             }
             shouldThrow<IllegalArgumentException> {
-                Range<Int>(5, null, Range.RangeType.Exclusive)
+                Range<Int>(5, null, Range.Bound.Exclusive)
             }
         }
     }
@@ -191,15 +191,15 @@ class RangeTest : FunSpec({
         }
 
         test("exclusive range") {
-            Range(0, 5, Range.RangeType.Exclusive).toString() shouldBe "0<..<5"
+            Range(0, 5, Range.Bound.Exclusive).toString() shouldBe "0<..<5"
         }
 
         test("exclusive start") {
-            Range(0, 5, Range.RangeType.ExclusiveStart).toString() shouldBe "0<..5"
+            Range(0, 5, Range.Bound.ExclusiveStart).toString() shouldBe "0<..5"
         }
 
         test("exclusive end") {
-            Range(0, 5, Range.RangeType.ExclusiveEnd).toString() shouldBe "0..<5"
+            Range(0, 5, Range.Bound.ExclusiveEnd).toString() shouldBe "0..<5"
         }
 
         test("open end") {
@@ -276,7 +276,7 @@ class RangeTest : FunSpec({
         }
 
         test("throws for non-inclusive ranges") {
-            val range1 = Range(0, 10, Range.RangeType.Exclusive)
+            val range1 = Range(0, 10, Range.Bound.Exclusive)
             val range2 = Range(5, 15)
             shouldThrow<IllegalArgumentException> {
                 range1.intersect(range2)
@@ -308,7 +308,7 @@ class RangeTest : FunSpec({
         }
 
         test("throws for exclusive ranges") {
-            val range = Range(5, 10, Range.RangeType.Exclusive)
+            val range = Range(5, 10, Range.Bound.Exclusive)
             shouldThrow<IllegalArgumentException> {
                 range.clamp(3)
             }
@@ -317,8 +317,8 @@ class RangeTest : FunSpec({
 
     context("equality") {
         test("equal ranges") {
-            val range1 = Range(0, 5, Range.RangeType.Exclusive)
-            val range2 = Range(0, 5, Range.RangeType.Exclusive)
+            val range1 = Range(0, 5, Range.Bound.Exclusive)
+            val range2 = Range(0, 5, Range.Bound.Exclusive)
             range1 shouldBe range2
         }
 
@@ -329,8 +329,8 @@ class RangeTest : FunSpec({
         }
 
         test("different types not equal") {
-            val range1 = Range(0, 5, Range.RangeType.Inclusive)
-            val range2 = Range(0, 5, Range.RangeType.Exclusive)
+            val range1 = Range(0, 5, Range.Bound.Inclusive)
+            val range2 = Range(0, 5, Range.Bound.Exclusive)
             range1 shouldNotBe range2
         }
 
