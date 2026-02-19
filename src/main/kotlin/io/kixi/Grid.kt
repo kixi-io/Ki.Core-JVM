@@ -100,8 +100,11 @@ class Grid<T> constructor(
     val elementNullable: Boolean = false
 ) {
     init {
-        require(width > 0) { "Width must be positive, got: $width" }
-        require(height > 0) { "Height must be positive, got: $height" }
+        require(width >= 0) { "Width must be non-negative, got: $width" }
+        require(height >= 0) { "Height must be non-negative, got: $height" }
+        require((width == 0) == (height == 0)) {
+            "Both dimensions must be zero or both positive, got: $width × $height"
+        }
         require(data.size == width * height) {
             "Data array size ${data.size} doesn't match grid dimensions $width x $height"
         }
