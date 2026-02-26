@@ -34,17 +34,14 @@ import io.kixi.text.ParseException
  * ## Accessing Cells
  * Grid supports multiple access styles:
  * ```kotlin
- * // Standard (zero-based x, y)
+ * // Standard (zero-based column, row)
  * grid[2, 34]
  *
- * // Sheet column (letter) and row (one-based)
- * grid["E", 8]
- *
- * // Sheet notation string
- * grid["E8"]
+ * // Plate notation (letter row, one-based column)
+ * grid["B", 3]
  *
  * // Coordinate object
- * grid[Coordinate.parse("E8")]
+ * grid[Coordinate.standard(2, 1)]
  * ```
  *
  * ## Row and Column Access
@@ -172,27 +169,35 @@ class Grid<T> constructor(
     operator fun set(coord: Coordinate, value: T?) = set(coord.x, coord.y, value)
 
     /**
-     * Gets the value using sheet notation (letter column, one-based row).
+     * Gets the value using plate notation (letter row, one-based column).
      *
-     * @param column The column letter(s) (A, B, ..., Z, AA, ...)
-     * @param row The one-based row number
+     * In plate notation, letters identify rows (A=first row, B=second row, etc.)
+     * and numbers identify columns (1-based).
+     *
+     * ```kotlin
+     * grid["B", 3]   // Row B (y=1), column 3 (x=2)
+     * grid["A", 1]   // Top-left cell (x=0, y=0)
+     * ```
+     *
+     * @param row The row letter(s) (A, B, ..., Z, AA, ...)
+     * @param column The one-based column number
      */
-    operator fun get(column: String, row: Int): T? {
-        val x = Coordinate.columnToIndex(column)
-        val y = row - 1
+    operator fun get(row: String, column: Int): T? {
+        val y = Coordinate.columnToIndex(row)
+        val x = column - 1
         return get(x, y)
     }
 
     /**
-     * Sets the value using sheet notation (letter column, one-based row).
+     * Sets the value using plate notation (letter row, one-based column).
      *
-     * @param column The column letter(s) (A, B, ..., Z, AA, ...)
-     * @param row The one-based row number
+     * @param row The row letter(s) (A, B, ..., Z, AA, ...)
+     * @param column The one-based column number
      * @param value The value to set
      */
-    operator fun set(column: String, row: Int, value: T?) {
-        val x = Coordinate.columnToIndex(column)
-        val y = row - 1
+    operator fun set(row: String, column: Int, value: T?) {
+        val y = Coordinate.columnToIndex(row)
+        val x = column - 1
         set(x, y, value)
     }
 

@@ -91,6 +91,105 @@ class CoordinateTest : StringSpec({
         }
     }
 
+    // ===== Plate Notation =====
+
+    "plate notation creates correct coordinates" {
+        val coord = Coordinate.plate("B", 3)
+        coord.x shouldBe 2    // column 3, zero-based
+        coord.y shouldBe 1    // row B, zero-based
+        coord.rowLetter shouldBe "B"
+        coord.columnNumber shouldBe 3
+    }
+
+    "plate notation A1 equals standard 0,0" {
+        val plate = Coordinate.plate("A", 1)
+        val standard = Coordinate.standard(0, 0)
+        plate shouldBe standard
+    }
+
+    "plate notation equals same standard coordinate" {
+        // plate("B", 3) → x=2, y=1
+        val plate = Coordinate.plate("B", 3)
+        val standard = Coordinate.standard(2, 1)
+        plate shouldBe standard
+    }
+
+    "plate notation with z coordinate" {
+        val coord = Coordinate.plate("C", 5, 2)
+        coord.x shouldBe 4     // column 5, zero-based
+        coord.y shouldBe 2     // row C, zero-based
+        coord.z shouldBe 2
+    }
+
+    "plate notation handles multi-letter rows" {
+        val coord = Coordinate.plate("AA", 1)
+        coord.y shouldBe 26
+        coord.x shouldBe 0
+        coord.rowLetter shouldBe "AA"
+    }
+
+    "plate notation rejects invalid row" {
+        shouldThrow<IllegalArgumentException> {
+            Coordinate.plate("", 1)
+        }
+        shouldThrow<IllegalArgumentException> {
+            Coordinate.plate("1A", 1)
+        }
+    }
+
+    "plate notation rejects column less than 1" {
+        shouldThrow<IllegalArgumentException> {
+            Coordinate.plate("A", 0)
+        }
+    }
+
+    "plate notation 96-well plate corners" {
+        // 96-well plate: 8 rows (A-H) x 12 columns (1-12)
+        val topLeft = Coordinate.plate("A", 1)
+        topLeft.x shouldBe 0
+        topLeft.y shouldBe 0
+
+        val topRight = Coordinate.plate("A", 12)
+        topRight.x shouldBe 11
+        topRight.y shouldBe 0
+
+        val bottomLeft = Coordinate.plate("H", 1)
+        bottomLeft.x shouldBe 0
+        bottomLeft.y shouldBe 7
+
+        val bottomRight = Coordinate.plate("H", 12)
+        bottomRight.x shouldBe 11
+        bottomRight.y shouldBe 7
+    }
+
+    // ===== Plate Notation Properties =====
+
+    "rowLetter returns correct letter" {
+        Coordinate.standard(0, 0).rowLetter shouldBe "A"
+        Coordinate.standard(0, 1).rowLetter shouldBe "B"
+        Coordinate.standard(0, 25).rowLetter shouldBe "Z"
+        Coordinate.standard(0, 26).rowLetter shouldBe "AA"
+    }
+
+    "columnNumber returns one-based column" {
+        Coordinate.standard(0, 0).columnNumber shouldBe 1
+        Coordinate.standard(4, 0).columnNumber shouldBe 5
+        Coordinate.standard(11, 0).columnNumber shouldBe 12
+    }
+
+    "toPlateNotation returns correct format" {
+        Coordinate.standard(0, 0).toPlateNotation() shouldBe "A1"
+        Coordinate.standard(2, 1).toPlateNotation() shouldBe "B3"
+        Coordinate.standard(11, 7).toPlateNotation() shouldBe "H12"
+    }
+
+    "plate and sheet notation differ for non-diagonal coordinates" {
+        // standard(2, 1): sheet = "C2", plate = "B3"
+        val coord = Coordinate.standard(2, 1)
+        coord.toSheetNotation() shouldBe "C2"
+        coord.toPlateNotation() shouldBe "B3"
+    }
+
     // ===== Column Index Conversion =====
 
     "indexToColumn converts correctly" {

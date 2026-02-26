@@ -91,6 +91,20 @@ class Coordinate private constructor(
      */
     val row: Int get() = y + 1
 
+    // --- Plate Notation Accessors ---
+
+    /**
+     * The row as a letter string for plate notation (A, B, ..., Z, AA, AB, ...).
+     * In HTS plate notation, rows are identified by letters.
+     */
+    val rowLetter: String get() = indexToColumn(y)
+
+    /**
+     * The one-based column number for plate notation.
+     * In HTS plate notation, columns are identified by numbers.
+     */
+    val columnNumber: Int get() = x + 1
+
     /**
      * Returns true if this coordinate has a z component.
      */
@@ -179,8 +193,18 @@ class Coordinate private constructor(
 
     /**
      * Returns the sheet notation string (e.g., "A1", "E8", "AA100").
+     * In sheet notation, letters identify columns and numbers identify rows.
      */
     fun toSheetNotation(): String = "$column$row"
+
+    /**
+     * Returns the plate notation string (e.g., "A1", "B3", "H12").
+     * In plate notation, letters identify rows and numbers identify columns.
+     *
+     * Note: "A1" looks the same in both notations (both refer to the top-left cell),
+     * but "B3" means different things: sheet = column B, row 3; plate = row B, column 3.
+     */
+    fun toPlateNotation(): String = "$rowLetter$columnNumber"
 
     /**
      * Returns the standard notation string (e.g., "0,0", "4,0").
@@ -264,6 +288,36 @@ class Coordinate private constructor(
 
             val x = columnToIndex(c)
             val y = r - 1
+            return Coordinate(x, y, z)
+        }
+
+        /**
+         * Creates a Coordinate using plate notation (letter row, one-based column).
+         *
+         * In HTS (High-Throughput Screening) plate notation, letters identify rows
+         * and numbers identify columns — the transpose of sheet notation.
+         *
+         * ```kotlin
+         * Coordinate.plate("A", 1)   // Top-left (same as x=0, y=0)
+         * Coordinate.plate("B", 3)   // Row B, column 3 (same as x=2, y=1)
+         * Coordinate.plate("H", 12)  // Row H, column 12 (standard 96-well plate corner)
+         * ```
+         *
+         * @param r The row letter(s) (A, B, ..., Z, AA, AB, ...)
+         * @param c The one-based column number
+         * @param z Optional zero-based depth index
+         * @throws IllegalArgumentException if r is invalid or c is less than 1
+         */
+        @JvmStatic
+        @JvmOverloads
+        fun plate(r: String, c: Int, z: Int? = null): Coordinate {
+            require(r.isNotEmpty() && r.all { it.isLetter() }) {
+                "Row must be one or more letters, got: $r"
+            }
+            require(c >= 1) { "Column must be at least 1 (one-based), got: $c" }
+
+            val x = c - 1
+            val y = columnToIndex(r)
             return Coordinate(x, y, z)
         }
 

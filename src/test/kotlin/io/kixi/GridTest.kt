@@ -109,14 +109,42 @@ class GridTest : StringSpec({
         grid[coord] shouldBe 42
     }
 
-    "get/set with sheet column and row" {
+    "get/set with plate notation (letter row, one-based column)" {
         val grid = Grid.of(10, 10, 0)
 
-        grid["E", 8] = 42
-        grid["E", 8] shouldBe 42
+        grid["B", 3] = 42
+        grid["B", 3] shouldBe 42
 
-        // E is column 4 (index), row 8 is index 7
-        grid[4, 7] shouldBe 42
+        // B is row 1 (index), column 3 is index 2
+        grid[2, 1] shouldBe 42
+    }
+
+    "plate notation A1 is top-left cell" {
+        val grid = Grid.of(5, 5, 0)
+        grid["A", 1] = 99
+        grid[0, 0] shouldBe 99
+    }
+
+    "plate notation matches standard indexing" {
+        val grid = Grid.fromRows(
+            listOf(1, 3, 5),
+            listOf(7, 9, 10),
+            listOf(2, 4, 6)
+        )
+
+        // grid[2,1] is x=2, y=1 → 10
+        grid[2, 1] shouldBe 10
+
+        // grid["B",3] is row B (y=1), column 3 (x=2) → 10
+        grid["B", 3] shouldBe 10
+    }
+
+    "plate notation with multi-letter rows" {
+        // A grid large enough to need row "AA" (y=26)
+        val grid = Grid.of(3, 30, 0)
+        grid["AA", 2] = 77
+        // AA = y index 26, column 2 = x index 1
+        grid[1, 26] shouldBe 77
     }
 
     "get/set with sheet notation string" {
