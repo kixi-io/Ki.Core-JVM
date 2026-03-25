@@ -701,7 +701,7 @@ class Grid<T> constructor(
             val nullableSuffix = if (elementNullable) "?" else ""
             builder.append(".grid<$typeName$nullableSuffix>(\n")
         } else {
-            builder.append(".grid(\n")
+            builder.append(".grid {\n")
         }
 
         // Calculate column widths for alignment
@@ -895,8 +895,8 @@ class Grid<T> constructor(
         @JvmStatic
         fun isLiteral(text: String): Boolean {
             val trimmed = text.trim()
-            return (trimmed.startsWith(".grid(") || trimmed.startsWith(".grid<")) &&
-                    trimmed.endsWith(")")
+            return (trimmed.startsWith(".grid {") || trimmed.startsWith(".grid<")) &&
+                    trimmed.endsWith("}")
         }
     }
 
