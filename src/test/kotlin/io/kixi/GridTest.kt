@@ -609,8 +609,9 @@ class GridTest : StringSpec({
     }
 
     "isLiteral detects grid literals" {
-        Grid.isLiteral(".grid(1 2 3)") shouldBe true
-        Grid.isLiteral(".grid<Int>(1 2 3)") shouldBe true
+        Grid.isLiteral(".grid{1 2 3}") shouldBe true
+        Grid.isLiteral(".grid<Int>{1 2 3}") shouldBe true
+        Grid.isLiteral(".grid<Int> { 1 2 3 }") shouldBe true
         Grid.isLiteral(".blob(abc)") shouldBe false
     }
 

@@ -7,28 +7,28 @@ import io.kixi.text.ParseException
  *
  * ## Ki Literal Format
  * ```
- * .grid(
+ * .grid {
  *     2   4   6
  *     8   10  12
  *     14  16  18
- * )
+ * }
  * ```
  *
  * Empty cells can be represented with `nil` or `-`:
  * ```
- * .grid(
+ * .grid {
  *     1    2    nil
  *     -    5    6
  *     7    8    9
- * )
+ * }
  * ```
  *
  * Typed grids (optional - type is inferred if not specified):
  * ```
- * .grid<Int>(
+ * .grid<Int> {
  *     1  2  3
  *     4  5  6
- * )
+ * }
  * ```
  *
  * ## Accessing Cells
@@ -699,7 +699,7 @@ class Grid<T> constructor(
                 else -> elementType.simpleName
             }
             val nullableSuffix = if (elementNullable) "?" else ""
-            builder.append(".grid<$typeName$nullableSuffix>(\n")
+            builder.append(".grid<$typeName$nullableSuffix> {\n")
         } else {
             builder.append(".grid {\n")
         }
@@ -728,7 +728,7 @@ class Grid<T> constructor(
             builder.append("\n")
         }
 
-        builder.append(")")
+        builder.append("}")
         return builder.toString()
     }
 
@@ -895,8 +895,10 @@ class Grid<T> constructor(
         @JvmStatic
         fun isLiteral(text: String): Boolean {
             val trimmed = text.trim()
-            return (trimmed.startsWith(".grid {") || trimmed.startsWith(".grid<")) &&
-                    trimmed.endsWith("}")
+            if (!trimmed.startsWith(".grid")) return false
+            if (!trimmed.endsWith("}")) return false
+            val rest = trimmed.substring(5) // after ".grid"
+            return rest.startsWith(" {") || rest.startsWith("{") || rest.startsWith("<")
         }
     }
 
