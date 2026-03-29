@@ -18,6 +18,17 @@ class IncompatibleUnitsException @JvmOverloads constructor(
     suggestion: String? = "Only units of the same dimension can be converted. " +
             "For example, meters to kilometers (both Length), or grams to kilograms (both Mass)."
 ) : KiException(
-    "Can't convert from ${from::class.java.simpleName} to ${to::class.java.simpleName}",
+    "Can't convert from ${formatUnit(from)} to ${formatUnit(to)}",
     suggestion
-)
+) {
+    companion object {
+        private fun formatUnit(unit: Unit): String {
+            return if (unit is Currency) {
+                if (unit.prefixSymbol != null) "${unit.symbol} (${unit.prefixSymbol})"
+                else unit.symbol
+            } else {
+                unit::class.java.simpleName
+            }
+        }
+    }
+}
