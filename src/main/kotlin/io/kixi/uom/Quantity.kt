@@ -861,11 +861,20 @@ class Quantity<T : Unit> : Comparable<Quantity<T>> {
                 is Volume -> Quantity<Volume>(numValue, unit)
                 is Speed -> Quantity<Speed>(numValue, unit)
                 is Density -> Quantity<Density>(numValue, unit)
+                is Concentration -> Quantity<Concentration>(numValue, unit)
+                is MolarMass -> Quantity<MolarMass>(numValue, unit)
 
                 // Currency units
                 is Currency -> Quantity<Currency>(numValue, unit)
 
-                else -> throw NoSuchUnitException(unit.symbol)
+                // A unit of a dimension this library does not define —
+                // registered by a host through [Unit.addUnit] with its own
+                // [Unit] subclass. Every operation on Quantity is generic in
+                // the unit's dimension, so nothing downstream needs the
+                // class listed here; this arm used to throw
+                // NoSuchUnitException, which made host-registered
+                // dimensions unparseable as literals.
+                else -> Quantity<Unit>(numValue, unit)
             }
         }
 

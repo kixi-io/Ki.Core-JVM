@@ -140,6 +140,7 @@ abstract class Unit(
 
         // Mass ////
         val ng = addUnit(Mass("ng", Dec(".000000001")))
+        val µg = addUnit(Mass("µg", Dec(".000001")))
         val mg = addUnit(Mass("mg", Dec(".001")))
         val cg = addUnit(Mass("cg", Dec(".01")))
         val g = addUnit(Mass("g", Dec("1")))
@@ -156,7 +157,28 @@ abstract class Unit(
         val dC = addUnit(Temperature("°C", Dec("1"), Dec("273.15")))
 
         // Substance Amount
+        val pmol = addUnit(SubstanceAmount("pmol", Dec(".000000000001")))
+        val nmol = addUnit(SubstanceAmount("nmol", Dec(".000000001")))
+        val µmol = addUnit(SubstanceAmount("µmol", Dec(".000001")))
+        val mmol = addUnit(SubstanceAmount("mmol", Dec(".001")))
         val mol = addUnit(SubstanceAmount("mol", Dec("1")))
+
+        // Molar Concentration (mol per litre) ////
+        val pM = addUnit(Concentration("pM", Dec(".000000000001")))
+        val nM = addUnit(Concentration("nM", Dec(".000000001")))
+        val µM = addUnit(Concentration("µM", Dec(".000001")))
+        val mM = addUnit(Concentration("mM", Dec(".001")))
+        val M = addUnit(Concentration("M", Dec("1")))
+
+        // Molar Mass ////
+
+        /**
+         * The dalton, numerically equal to g/mol — spelled the way chemists
+         * read a molar mass, since a unit symbol cannot contain `/`. kDa is
+         * the protein scale.
+         */
+        val Da = addUnit(MolarMass("Da", Dec("1")))
+        val kDa = addUnit(MolarMass("kDa", Dec("1000")))
 
         // Electric Current
         val A = addUnit(Current("A", Dec("1")))
@@ -204,6 +226,12 @@ abstract class Unit(
          * to be consistent with liter (ℓ)
          */
         val mL = addUnit(Volume("mℓ", Dec(".000001")))
+
+        /** µL / uL / ul are accepted when parsing; µℓ is the output form. */
+        val µL = addUnit(Volume("µℓ", Dec(".000000001")))
+
+        /** nL is accepted when parsing; nℓ is the output form. */
+        val nL = addUnit(Volume("nℓ", Dec(".000000000001")))
 
         // Speed / Velocity ////
 
@@ -287,6 +315,14 @@ abstract class Unit(
                 "dF" -> "°F"
                 "um", "µm" -> "µm"
 
+                // ASCII spellings of the micro-prefixed units (µ is
+                // awkward to type) and the litre's ASCII forms.
+                "uL", "µL", "ul" -> "µℓ"
+                "nL" -> "nℓ"
+                "ug" -> "µg"
+                "uM" -> "µM"
+                "umol" -> "µmol"
+
                 // Handle ASCII alternatives for superscripts
                 "mm2" -> "mm²"
                 "cm2" -> "cm²"
@@ -359,6 +395,8 @@ abstract class Unit(
          * - `mL` → `mℓ` (milliliter)
          * - `dC` → `°C` (Celsius)
          * - `um` → `µm` (micrometer)
+         * - `uL` / `µL` → `µℓ`, `nL` → `nℓ`, `ug` → `µg`, `uM` → `µM`,
+         *   `umol` → `µmol`
          * - `m2` → `m²` (square meter)
          * - `m3` → `m³` (cubic meter)
          *
@@ -500,6 +538,27 @@ class Current(symbol: String, factor: Dec, unicode: String = symbol) :
 class Luminosity(symbol: String, factor: Dec, unicode: String = symbol) :
     Unit(symbol, factor, unicode = unicode) {
     override val baseUnit get() = getUnit("cd")!! as Luminosity
+}
+
+/**
+ * Molar concentration units (M, mM, µM, nM, pM) — moles of solute per
+ * litre of solution. Base unit: molar (M).
+ */
+@Suppress("unused", "UNUSED_PARAMETER")
+class Concentration(symbol: String, factor: Dec, unicode: String = symbol) :
+    Unit(symbol, factor, unicode = unicode) {
+    override val baseUnit get() = getUnit("M")!! as Concentration
+}
+
+/**
+ * Molar mass units (Da, kDa). The dalton is numerically g/mol, so a
+ * molecule's molar mass in Da is the number a balance needs per mole.
+ * Base unit: dalton (Da).
+ */
+@Suppress("unused", "UNUSED_PARAMETER")
+class MolarMass(symbol: String, factor: Dec, unicode: String = symbol) :
+    Unit(symbol, factor, unicode = unicode) {
+    override val baseUnit get() = getUnit("Da")!! as MolarMass
 }
 
 /** Volumetric mass density units. Base unit: kilograms per cubic meter (kgpm³). */
