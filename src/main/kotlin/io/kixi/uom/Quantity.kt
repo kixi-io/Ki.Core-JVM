@@ -3,6 +3,7 @@ package io.kixi.uom
 import io.kixi.Parseable
 import io.kixi.text.ParseException
 import io.kixi.whole
+import java.math.MathContext
 import java.math.BigDecimal as Dec
 
 /**
@@ -57,6 +58,21 @@ import java.math.BigDecimal as Dec
  *   val inMeters = distance convertTo Unit.m
  * ```
  *
+ * ## Numeric Behavior
+ *
+ * Division is exact: values held as Dec divide with [MathContext.DECIMAL128],
+ * and Int/Long values are promoted to Dec whenever a quotient is not whole
+ * (`5cm / 2` is `2.5cm`, `10cm / 2` stays `5cm:i`). Float and Double operands
+ * convert to Dec through their decimal string form, so `0.1:d` behaves as
+ * one tenth, not as its binary approximation.
+ *
+ * ## Quantity × Quantity and Quantity ÷ Quantity
+ *
+ * Cross-dimension arithmetic goes through [UnitAlgebra]: `150mM * 1ℓ` is
+ * `150mmol`, `5g / 58.44Da` is moles, and dividing quantities of the same
+ * dimension gives a dimensionless ratio that prints as a bare number. See
+ * [UnitAlgebra] for the rule table, result-unit scaling, and numeric typing.
+ *
  * @author Daniel Leuck
  * @property value The numeric value of the quantity
  * @property unit The unit of measure
@@ -103,8 +119,9 @@ class Quantity<T : Unit> : Comparable<Quantity<T>> {
         this.unit = result.second as T
     }
 
-    override fun toString(): String {
-        val numType = when (value) {
+    /** The `:i` / `:L` / `:d` / `:f` suffix for this quantity's numeric type. */
+    private val numTypeSuffix: String
+        get() = when (value) {
             is Long -> ":L"
             is Double -> ":d"
             is Float -> ":f"
@@ -112,18 +129,17 @@ class Quantity<T : Unit> : Comparable<Quantity<T>> {
             else -> ""
         }
 
-        val valueText = when (value) {
-            is Dec -> {
-                // Use toPlainString() to avoid scientific notation (e.g., 1E+1 for 10)
-                // stripTrailingZeros() removes unnecessary decimal places (e.g., 10.00 -> 10)
-                val stripped = value.stripTrailingZeros()
-                stripped.toPlainString()
-            }
+    /**
+     * The numeric value as display text. Dec values are printed in plain
+     * notation (never `1E+1`) with trailing zeros stripped.
+     */
+    private val valueText: String
+        get() = when (value) {
+            is Dec -> value.stripTrailingZeros().toPlainString()
             else -> value.toString()
         }
 
-        return unit.formatQuantity(valueText, numType)
-    }
+    override fun toString(): String = unit.formatQuantity(valueText, numTypeSuffix)
 
     /**
      * Returns the quantity formatted with standard suffix notation, even for
@@ -137,25 +153,7 @@ class Quantity<T : Unit> : Comparable<Quantity<T>> {
      * Quantity(100, Unit.cm).toSuffixString()          // "100cm:i"
      * ```
      */
-    fun toSuffixString(): String {
-        val numType = when (value) {
-            is Long -> ":L"
-            is Double -> ":d"
-            is Float -> ":f"
-            is Int -> ":i"
-            else -> ""
-        }
-
-        val valueText = when (value) {
-            is Dec -> {
-                val stripped = (value as Dec).stripTrailingZeros()
-                stripped.toPlainString()
-            }
-            else -> value.toString()
-        }
-
-        return "$valueText${unit.symbol}$numType"
-    }
+    fun toSuffixString(): String = "$valueText${unit.symbol}$numTypeSuffix"
 
     /**
      * Converts this quantity to an equivalent quantity in the target unit.
@@ -164,7 +162,7 @@ class Quantity<T : Unit> : Comparable<Quantity<T>> {
      * a non-whole number and the value is Int or Long, the result will be promoted to Dec.
      *
      * For temperature conversions, this properly handles the offset between
-     * Celsius and Kelvin (e.g., 0°C = 273.15K).
+     * Celsius, Fahrenheit and Kelvin (e.g., 0°C = 273.15K = 32°F).
      *
      * @param otherUnit The target unit (must be of the same dimension)
      * @return A new Quantity with the converted value and target unit
@@ -330,12 +328,12 @@ class Quantity<T : Unit> : Comparable<Quantity<T>> {
     }
 
     operator fun div(operand: Int): Quantity<T> = when (value) {
-        is Int -> Quantity(value / operand, unit)
-        is Dec -> Quantity(value / operand.toBigDecimal(), unit)
-        is Long -> Quantity(value / operand, unit)
+        is Int -> Quantity(integralQuotient(value.toLong(), operand.toLong(), asInt = true), unit)
+        is Dec -> Quantity(value.divide(operand.toBigDecimal(), MathContext.DECIMAL128), unit)
+        is Long -> Quantity(integralQuotient(value, operand.toLong(), asInt = false), unit)
         is Double -> Quantity(value / operand, unit)
         is Float -> Quantity(value / operand, unit)
-        else -> Quantity(value.toInt() / operand, unit)
+        else -> Quantity(decValue(value).divide(operand.toBigDecimal(), MathContext.DECIMAL128), unit)
     }
 
     operator fun rem(operand: Int): Quantity<T> = when (value) {
@@ -376,12 +374,12 @@ class Quantity<T : Unit> : Comparable<Quantity<T>> {
     }
 
     operator fun div(operand: Long): Quantity<T> = when (value) {
-        is Int -> Quantity(value / operand, unit)
-        is Dec -> Quantity(value / operand.toBigDecimal(), unit)
-        is Long -> Quantity(value / operand, unit)
+        is Int -> Quantity(integralQuotient(value.toLong(), operand, asInt = false), unit)
+        is Dec -> Quantity(value.divide(operand.toBigDecimal(), MathContext.DECIMAL128), unit)
+        is Long -> Quantity(integralQuotient(value, operand, asInt = false), unit)
         is Double -> Quantity(value / operand, unit)
         is Float -> Quantity(value / operand, unit)
-        else -> Quantity(value.toInt() / operand, unit)
+        else -> Quantity(decValue(value).divide(operand.toBigDecimal(), MathContext.DECIMAL128), unit)
     }
 
     operator fun rem(operand: Long): Quantity<T> = when (value) {
@@ -396,7 +394,7 @@ class Quantity<T : Unit> : Comparable<Quantity<T>> {
     // Float operand
     operator fun plus(operand: Float): Quantity<T> = when (value) {
         is Int -> Quantity(value + operand, unit)
-        is Dec -> Quantity(value + operand.toBigDecimal(), unit)
+        is Dec -> Quantity(value + decValue(operand), unit)
         is Long -> Quantity(value + operand, unit)
         is Double -> Quantity(value + operand, unit)
         is Float -> Quantity(value + operand, unit)
@@ -405,7 +403,7 @@ class Quantity<T : Unit> : Comparable<Quantity<T>> {
 
     operator fun minus(operand: Float): Quantity<T> = when (value) {
         is Int -> Quantity(value - operand, unit)
-        is Dec -> Quantity(value - operand.toBigDecimal(), unit)
+        is Dec -> Quantity(value - decValue(operand), unit)
         is Long -> Quantity(value - operand, unit)
         is Double -> Quantity(value - operand, unit)
         is Float -> Quantity(value - operand, unit)
@@ -414,7 +412,7 @@ class Quantity<T : Unit> : Comparable<Quantity<T>> {
 
     operator fun times(operand: Float): Quantity<T> = when (value) {
         is Int -> Quantity(value * operand, unit)
-        is Dec -> Quantity(value * operand.toBigDecimal(), unit)
+        is Dec -> Quantity(value * decValue(operand), unit)
         is Long -> Quantity(value * operand, unit)
         is Double -> Quantity(value * operand, unit)
         is Float -> Quantity(value * operand, unit)
@@ -423,7 +421,7 @@ class Quantity<T : Unit> : Comparable<Quantity<T>> {
 
     operator fun div(operand: Float): Quantity<T> = when (value) {
         is Int -> Quantity(value / operand, unit)
-        is Dec -> Quantity(value / operand.toBigDecimal(), unit)
+        is Dec -> Quantity(value.divide(decValue(operand), MathContext.DECIMAL128), unit)
         is Long -> Quantity(value / operand, unit)
         is Double -> Quantity(value / operand, unit)
         is Float -> Quantity(value / operand, unit)
@@ -432,7 +430,7 @@ class Quantity<T : Unit> : Comparable<Quantity<T>> {
 
     operator fun rem(operand: Float): Quantity<T> = when (value) {
         is Int -> Quantity(value % operand, unit)
-        is Dec -> Quantity(value % operand.toBigDecimal(), unit)
+        is Dec -> Quantity(value % decValue(operand), unit)
         is Long -> Quantity(value % operand, unit)
         is Double -> Quantity(value % operand, unit)
         is Float -> Quantity(value % operand, unit)
@@ -442,7 +440,7 @@ class Quantity<T : Unit> : Comparable<Quantity<T>> {
     // Double operand
     operator fun plus(operand: Double): Quantity<T> = when (value) {
         is Int -> Quantity(value + operand, unit)
-        is Dec -> Quantity(value + operand.toBigDecimal(), unit)
+        is Dec -> Quantity(value + decValue(operand), unit)
         is Long -> Quantity(value + operand, unit)
         is Double -> Quantity(value + operand, unit)
         is Float -> Quantity(value + operand, unit)
@@ -451,7 +449,7 @@ class Quantity<T : Unit> : Comparable<Quantity<T>> {
 
     operator fun minus(operand: Double): Quantity<T> = when (value) {
         is Int -> Quantity(value - operand, unit)
-        is Dec -> Quantity(value - operand.toBigDecimal(), unit)
+        is Dec -> Quantity(value - decValue(operand), unit)
         is Long -> Quantity(value - operand, unit)
         is Double -> Quantity(value - operand, unit)
         is Float -> Quantity(value - operand, unit)
@@ -460,7 +458,7 @@ class Quantity<T : Unit> : Comparable<Quantity<T>> {
 
     operator fun times(operand: Double): Quantity<T> = when (value) {
         is Int -> Quantity(value * operand, unit)
-        is Dec -> Quantity(value * operand.toBigDecimal(), unit)
+        is Dec -> Quantity(value * decValue(operand), unit)
         is Long -> Quantity(value * operand, unit)
         is Double -> Quantity(value * operand, unit)
         is Float -> Quantity(value * operand, unit)
@@ -469,7 +467,7 @@ class Quantity<T : Unit> : Comparable<Quantity<T>> {
 
     operator fun div(operand: Double): Quantity<T> = when (value) {
         is Int -> Quantity(value / operand, unit)
-        is Dec -> Quantity(value / operand.toBigDecimal(), unit)
+        is Dec -> Quantity(value.divide(decValue(operand), MathContext.DECIMAL128), unit)
         is Long -> Quantity(value / operand, unit)
         is Double -> Quantity(value / operand, unit)
         is Float -> Quantity(value / operand, unit)
@@ -478,7 +476,7 @@ class Quantity<T : Unit> : Comparable<Quantity<T>> {
 
     operator fun rem(operand: Double): Quantity<T> = when (value) {
         is Int -> Quantity(value % operand, unit)
-        is Dec -> Quantity(value % operand.toBigDecimal(), unit)
+        is Dec -> Quantity(value % decValue(operand), unit)
         is Long -> Quantity(value % operand, unit)
         is Double -> Quantity(value % operand, unit)
         is Float -> Quantity(value % operand, unit)
@@ -486,50 +484,20 @@ class Quantity<T : Unit> : Comparable<Quantity<T>> {
     }
 
     // Dec operand
-    operator fun plus(operand: Dec): Quantity<T> = when (value) {
-        is Int -> Quantity(value.toBigDecimal() + operand, unit)
-        is Dec -> Quantity(value + operand, unit)
-        is Long -> Quantity(value.toBigDecimal() + operand, unit)
-        is Double -> Quantity(value.toBigDecimal() + operand, unit)
-        is Float -> Quantity(value.toBigDecimal() + operand, unit)
-        else -> Quantity(value.toInt().toBigDecimal() + operand, unit)
-    }
+    operator fun plus(operand: Dec): Quantity<T> =
+        Quantity(decValue(value) + operand, unit)
 
-    operator fun minus(operand: Dec): Quantity<T> = when (value) {
-        is Int -> Quantity(value.toBigDecimal() - operand, unit)
-        is Dec -> Quantity(value - operand, unit)
-        is Long -> Quantity(value.toBigDecimal() - operand, unit)
-        is Double -> Quantity(value.toBigDecimal() - operand, unit)
-        is Float -> Quantity(value.toBigDecimal() - operand, unit)
-        else -> Quantity(value.toInt().toBigDecimal() - operand, unit)
-    }
+    operator fun minus(operand: Dec): Quantity<T> =
+        Quantity(decValue(value) - operand, unit)
 
-    operator fun times(operand: Dec): Quantity<T> = when (value) {
-        is Int -> Quantity(value.toBigDecimal() * operand, unit)
-        is Dec -> Quantity(value * operand, unit)
-        is Long -> Quantity(value.toBigDecimal() * operand, unit)
-        is Double -> Quantity(value.toBigDecimal() * operand, unit)
-        is Float -> Quantity(value.toBigDecimal() * operand, unit)
-        else -> Quantity(value.toInt().toBigDecimal() * operand, unit)
-    }
+    operator fun times(operand: Dec): Quantity<T> =
+        Quantity(decValue(value) * operand, unit)
 
-    operator fun div(operand: Dec): Quantity<T> = when (value) {
-        is Int -> Quantity(value.toBigDecimal() / operand, unit)
-        is Dec -> Quantity(value / operand, unit)
-        is Long -> Quantity(value.toBigDecimal() / operand, unit)
-        is Double -> Quantity(value.toBigDecimal() / operand, unit)
-        is Float -> Quantity(value.toBigDecimal() / operand, unit)
-        else -> Quantity(value.toInt().toBigDecimal() / operand, unit)
-    }
+    operator fun div(operand: Dec): Quantity<T> =
+        Quantity(decValue(value).divide(operand, MathContext.DECIMAL128), unit)
 
-    operator fun rem(operand: Dec): Quantity<T> = when (value) {
-        is Int -> Quantity(value.toBigDecimal() % operand, unit)
-        is Dec -> Quantity(value % operand, unit)
-        is Long -> Quantity(value.toBigDecimal() % operand, unit)
-        is Double -> Quantity(value.toBigDecimal() % operand, unit)
-        is Float -> Quantity(value.toBigDecimal() % operand, unit)
-        else -> Quantity(value.toInt().toBigDecimal() % operand, unit)
-    }
+    operator fun rem(operand: Dec): Quantity<T> =
+        Quantity(decValue(value) % operand, unit)
 
     // Quantity operand
 
@@ -592,7 +560,60 @@ class Quantity<T : Unit> : Comparable<Quantity<T>> {
         }
     }
 
+    /**
+     * Multiplies two quantities across dimensions through [UnitAlgebra]:
+     * `150mM × 1ℓ` is `150mmol`, `2cm × 3cm` is `6cm²`, `60kph × 30min` is
+     * `30km`. The result is rescaled along its dimension's display ladder;
+     * use [convertTo] to demand a specific unit.
+     *
+     * @throws UndefinedUnitArithmeticException if no product rule connects
+     *         the two dimensions (e.g. `Concentration × Concentration`, or
+     *         anything involving `Temperature`)
+     */
+    operator fun times(operand: Quantity<*>): Quantity<*> =
+        UnitAlgebra.multiply(this, operand)
+
+    /**
+     * Divides two quantities through [UnitAlgebra]. Same-dimension division
+     * returns a dimensionless ratio in [Unit.ratio], computed on the
+     * base-unit amounts, which prints as a bare number: `300mm / 1m` is
+     * `0.3`. Across dimensions, a product rule's derived quotient applies:
+     * `150mmol / 1ℓ` is `150mM`, `5g / 58.44Da` is moles.
+     *
+     * @throws UndefinedUnitArithmeticException if no rule connects the two
+     *         dimensions
+     * @throws ArithmeticException on division by a zero quantity
+     */
+    operator fun div(operand: Quantity<*>): Quantity<*> =
+        UnitAlgebra.divide(this, operand)
+
     companion object : Parseable<Quantity<*>> {
+
+        /**
+         * Converts any Number to Dec through its decimal string form, so Float
+         * and Double contribute the value the user wrote (0.1, not
+         * 0.1000000000000000055511151231257827).
+         */
+        private fun decValue(n: Number): Dec = when (n) {
+            is Dec -> n
+            else -> Dec(n.toString())
+        }
+
+        /**
+         * Divides two integral values. Whole quotients keep an integral type
+         * (Int when [asInt], otherwise Long); anything else is promoted to an
+         * exact Dec quotient, mirroring [convertTo]'s promotion rule.
+         *
+         * @throws ArithmeticException on division by zero
+         */
+        private fun integralQuotient(value: Long, operand: Long, asInt: Boolean): Number =
+            if (operand != 0L && value % operand == 0L) {
+                val quotient = value / operand
+                if (asInt) quotient.toInt() else quotient
+            } else {
+                Dec(value).divide(Dec(operand), MathContext.DECIMAL128)
+            }
+
         /**
          * Parses the numeric portion and unit from a quantity string.
          * Handles scientific notation in both parentheses and letter (n/p) styles.
@@ -749,7 +770,8 @@ class Quantity<T : Unit> : Comparable<Quantity<T>> {
         }
 
         /**
-         * Compare two Number values.
+         * Compare two Number values. Float and Double values are compared with
+         * Dec values through their decimal string form (see [decValue]).
          */
         private fun compareNumbers(value1: Number, value2: Number): Int {
             return when (value1) {
@@ -765,8 +787,8 @@ class Quantity<T : Unit> : Comparable<Quantity<T>> {
                     is Int -> value1.compareTo(value2.toBigDecimal())
                     is Dec -> value1.compareTo(value2)
                     is Long -> value1.compareTo(value2.toBigDecimal())
-                    is Double -> value1.compareTo(value2.toBigDecimal())
-                    is Float -> value1.compareTo(value2.toBigDecimal())
+                    is Double -> value1.compareTo(decValue(value2))
+                    is Float -> value1.compareTo(decValue(value2))
                     else -> value1.compareTo(value2.toInt().toBigDecimal())
                 }
                 is Long -> when (value2) {
@@ -779,7 +801,7 @@ class Quantity<T : Unit> : Comparable<Quantity<T>> {
                 }
                 is Double -> when (value2) {
                     is Int -> value1.compareTo(value2.toDouble())
-                    is Dec -> value1.toBigDecimal().compareTo(value2)
+                    is Dec -> decValue(value1).compareTo(value2)
                     is Long -> value1.compareTo(value2.toDouble())
                     is Double -> value1.compareTo(value2)
                     is Float -> value1.compareTo(value2.toDouble())
@@ -787,7 +809,7 @@ class Quantity<T : Unit> : Comparable<Quantity<T>> {
                 }
                 is Float -> when (value2) {
                     is Int -> value1.compareTo(value2.toFloat())
-                    is Dec -> value1.toBigDecimal().compareTo(value2)
+                    is Dec -> decValue(value1).compareTo(value2)
                     is Long -> value1.toDouble().compareTo(value2.toDouble())
                     is Double -> value1.toDouble().compareTo(value2)
                     is Float -> value1.compareTo(value2)
@@ -861,6 +883,7 @@ class Quantity<T : Unit> : Comparable<Quantity<T>> {
                 is Volume -> Quantity<Volume>(numValue, unit)
                 is Speed -> Quantity<Speed>(numValue, unit)
                 is Density -> Quantity<Density>(numValue, unit)
+                is Pressure -> Quantity<Pressure>(numValue, unit)
                 is Concentration -> Quantity<Concentration>(numValue, unit)
                 is MolarMass -> Quantity<MolarMass>(numValue, unit)
 

@@ -20,7 +20,10 @@ import java.util.concurrent.ConcurrentHashMap
  *
  * @property symbol The unit's symbol (e.g., "km", "kg", "°C")
  * @property factor The conversion factor relative to the dimension's base unit
- * @property offset The offset to add when converting to the base unit (default: 0)
+ *                  (how many base units one of this unit represents)
+ * @property offset The offset added to a value, in this unit's own scale, before
+ *                  the factor is applied when converting to the base unit
+ *                  (default: 0; only temperature units use it)
  * @property unicode The Unicode representation of the symbol (defaults to [symbol])
  */
 @Suppress("unused")
@@ -43,7 +46,7 @@ abstract class Unit(
     override fun toString(): String = symbol
     override fun equals(other: Any?): Boolean = other != null && other is Unit &&
             other.symbol == symbol
-    override fun hashCode(): Int = symbol.hashCode() or 31
+    override fun hashCode(): Int = symbol.hashCode() * 31
 
     /**
      * Formats a quantity value with this unit for display.
@@ -79,10 +82,13 @@ abstract class Unit(
      * Converts a value from this unit to the target unit, handling both factor
      * and offset conversions.
      *
-     * For most units, this is equivalent to multiplying by [factorTo]. For temperature
-     * units, this also applies the necessary offset adjustment (e.g., Celsius to Kelvin).
+     * For most units, this is equivalent to multiplying by [factorTo]. Offset
+     * units (temperatures) override this with exact affine math.
      *
-     * Formula: result = (value + sourceOffset - targetOffset) × (sourceFactor / targetFactor)
+     * Formula: result = (value + sourceOffset) × sourceFactor ÷ targetFactor − targetOffset
+     *
+     * The division happens last, in one step, so conversions that terminate in
+     * decimal come out exact.
      *
      * @param value The value in this unit
      * @param target The target unit
@@ -93,9 +99,8 @@ abstract class Unit(
         if (this::class.java != target::class.java)
             throw IncompatibleUnitsException(this, target)
 
-        // Apply offset adjustment (for temperature), then factor
-        val adjusted = value + this.offset - target.offset
-        return adjusted.multiply(factorTo(target), MathContext.DECIMAL128)
+        val base = (value + this.offset).multiply(this.factor)
+        return base.divide(target.factor, MathContext.DECIMAL128) - target.offset
     }
 
     /**
@@ -138,7 +143,12 @@ abstract class Unit(
         val µm = addUnit(Length("µm", Dec(".000001")))
         val dm = addUnit(Length("dm", Dec(".1")))
 
+        /** The ångström (0.1nm): bond lengths, protein structures. */
+        val Å = addUnit(Length("Å", Dec(".0000000001")))
+
         // Mass ////
+        val fg = addUnit(Mass("fg", Dec(".000000000000001")))
+        val pg = addUnit(Mass("pg", Dec(".000000000001")))
         val ng = addUnit(Mass("ng", Dec(".000000001")))
         val µg = addUnit(Mass("µg", Dec(".000001")))
         val mg = addUnit(Mass("mg", Dec(".001")))
@@ -147,16 +157,23 @@ abstract class Unit(
         val kg = addUnit(Mass("kg", Dec("1000")))
 
         // Temperature ////
-        val K = addUnit(Temperature("K", Dec("1")))
+        val K = addUnit(Temperature("K"))
 
         /**
-         * Celsius (°C) has the same magnitude as Kelvin, just a different zero point.
-         * The offset of 273.15 means: K = °C + 273.15
-         * dC is also accepted when parsing, but °C is always used for output.
+         * Celsius (°C) has the same magnitude as Kelvin, just a different zero point:
+         * K = °C + 273.15. dC is also accepted when parsing, but °C is always used
+         * for output.
          */
-        val dC = addUnit(Temperature("°C", Dec("1"), Dec("273.15")))
+        val dC = addUnit(Temperature("°C", Dec.ONE, Dec("273.15")))
+
+        /**
+         * Fahrenheit (°F) has 1.8 degrees per kelvin: K = (°F + 459.67) ÷ 1.8.
+         * dF is also accepted when parsing, but °F is always used for output.
+         */
+        val dF = addUnit(Temperature("°F", Dec("1.8"), Dec("459.67")))
 
         // Substance Amount
+        val fmol = addUnit(SubstanceAmount("fmol", Dec(".000000000000001")))
         val pmol = addUnit(SubstanceAmount("pmol", Dec(".000000000001")))
         val nmol = addUnit(SubstanceAmount("nmol", Dec(".000000001")))
         val µmol = addUnit(SubstanceAmount("µmol", Dec(".000001")))
@@ -207,6 +224,9 @@ abstract class Unit(
         val km3 = addUnit(Volume("km³", Dec("1000000000")))
 
         // Duration
+        val ns = addUnit(Time("ns", Dec(".000000001")))
+        val µs = addUnit(Time("µs", Dec(".000001")))
+        val ms = addUnit(Time("ms", Dec(".001")))
         val s = addUnit(Time("s", Dec("1")))
         val min = addUnit(Time("min", Dec("60")))
         val h = addUnit(Time("h", Dec("3600")))
@@ -214,6 +234,15 @@ abstract class Unit(
 
         // pH as a dimensionless unit
         val pH = addUnit(Dimensionless("pH", Dec("1")))
+
+        /**
+         * The unitless ratio produced by dividing quantities of the same
+         * dimension (`300mm / 1m`, `6mol / 2mol`, `$100 / $50`). Its symbol is
+         * empty, so a ratio quantity prints as a bare number ("0.3"), which is
+         * also how it reads as a Ki literal. Deliberately NOT registered in
+         * the unit registry: no literal parses to it.
+         */
+        val ratio = Dimensionless("", Dec.ONE)
 
         /**
          * We have to use ℓ to avoid a conflict with L for Long integer literals.
@@ -233,6 +262,9 @@ abstract class Unit(
         /** nL is accepted when parsing; nℓ is the output form. */
         val nL = addUnit(Volume("nℓ", Dec(".000000000001")))
 
+        /** pL is accepted when parsing; pℓ is the output form (acoustic dispensing). */
+        val pL = addUnit(Volume("pℓ", Dec(".000000000000001")))
+
         // Speed / Velocity ////
 
         /**
@@ -240,7 +272,9 @@ abstract class Unit(
          * base speed unit. It is far more common and useful for most purposes than mps.
          */
         val kph = addUnit(Speed("kph", Dec("1")))
-        val mps = addUnit(Speed("mps", Dec("0.277778")))
+
+        /** 1 m/s is exactly 3.6 km/h. */
+        val mps = addUnit(Speed("mps", Dec("3.6")))
 
         // Density (Volumetric Mass) ////
 
@@ -249,7 +283,61 @@ abstract class Unit(
          */
         val kgpm3 = addUnit(Density("kgpm³", Dec("1")))
 
-        // TODO: Derived acceleration, force, pressure, energy, power, charge,
+        /*
+         * Mass concentration reads as density dimensionally (1 ng/µℓ = 1 g/ℓ
+         * = 1 kg/m³), so the lab spellings live on the Density dimension. The
+         * `p` in each symbol reads "per", following kgpm³. ASCII forms
+         * (mgpmL, ngpuL, ...) are accepted when parsing.
+         */
+
+        /** g/mℓ — how chemists write the density of liquids (water is 1gpmℓ). */
+        val gpmL = addUnit(Density("gpmℓ", Dec("1000")))
+
+        /** g/ℓ, numerically kg/m³. */
+        val gpL = addUnit(Density("gpℓ", Dec("1")))
+
+        /** mg/mℓ — protein concentrations. */
+        val mgpmL = addUnit(Density("mgpmℓ", Dec("1")))
+
+        /** µg/mℓ — antibody and drug concentrations. */
+        val µgpmL = addUnit(Density("µgpmℓ", Dec(".001")))
+
+        /** ng/µℓ — nucleic acid concentrations (numerically µg/mℓ). */
+        val ngpµL = addUnit(Density("ngpµℓ", Dec(".001")))
+
+        /** ng/mℓ — serum analytes. */
+        val ngpmL = addUnit(Density("ngpmℓ", Dec(".000001")))
+
+        /** pg/mℓ — cytokines, ELISA territory. */
+        val pgpmL = addUnit(Density("pgpmℓ", Dec(".000000001")))
+
+        // Pressure ////
+
+        /** The pascal, SI. */
+        val Pa = addUnit(Pressure("Pa"))
+        val kPa = addUnit(Pressure("kPa", Dec("1000")))
+        val bar = addUnit(Pressure("bar", Dec("100000")))
+        val mbar = addUnit(Pressure("mbar", Dec("100")))
+
+        /** Standard atmosphere, exactly 101325 Pa. */
+        val atm = addUnit(Pressure("atm", Dec("101325")))
+
+        /**
+         * The millimetre of mercury, defined here as the torr (exactly
+         * 101325/760 Pa) so that 760mmHg is exactly 1atm — vacuum-line and
+         * rotovap arithmetic comes out clean. Torr is accepted when parsing.
+         * (The BIPM "conventional" mmHg differs by 2 parts in 10⁷; treated
+         * as the same unit.)
+         */
+        val mmHg = addUnit(Pressure("mmHg", Dec("101325"), Dec("760")))
+
+        /**
+         * Pound-force per square inch, exactly 0.45359237 × 9.80665 ÷
+         * 0.0254² Pa, stored as the exact ratio 44482216152605 / 6451600000.
+         */
+        val psi = addUnit(Pressure("psi", Dec("44482216152605"), Dec("6451600000")))
+
+        // TODO: Derived acceleration, force, energy, power, charge,
         //       potential delta, resistance, conductance and capacitance
 
         /* Currencies -------- */
@@ -319,9 +407,28 @@ abstract class Unit(
                 // awkward to type) and the litre's ASCII forms.
                 "uL", "µL", "ul" -> "µℓ"
                 "nL" -> "nℓ"
+                "pL" -> "pℓ"
                 "ug" -> "µg"
                 "uM" -> "µM"
                 "umol" -> "µmol"
+                "us" -> "µs"
+
+                // Molar-mass spellings chemists write: the unified atomic
+                // mass unit and g/mol are both numerically the dalton.
+                "u" -> "Da"
+                "gpmol" -> "Da"
+
+                // Torr is the mmHg definition this library uses.
+                "Torr", "torr" -> "mmHg"
+
+                // Mass-concentration ASCII forms.
+                "gpmL" -> "gpmℓ"
+                "gpL", "gpLT" -> "gpℓ"
+                "mgpmL" -> "mgpmℓ"
+                "ugpmL", "µgpmL" -> "µgpmℓ"
+                "ngpuL", "ngpµL", "ngpul" -> "ngpµℓ"
+                "ngpmL" -> "ngpmℓ"
+                "pgpmL" -> "pgpmℓ"
 
                 // Handle ASCII alternatives for superscripts
                 "mm2" -> "mm²"
@@ -393,7 +500,7 @@ abstract class Unit(
          * Handles common aliases and ASCII alternatives:
          * - `LT` → `ℓ` (liter)
          * - `mL` → `mℓ` (milliliter)
-         * - `dC` → `°C` (Celsius)
+         * - `dC` → `°C` (Celsius), `dF` → `°F` (Fahrenheit)
          * - `um` → `µm` (micrometer)
          * - `uL` / `µL` → `µℓ`, `nL` → `nℓ`, `ug` → `µg`, `uM` → `µM`,
          *   `umol` → `µmol`
@@ -505,11 +612,38 @@ class Dimensionless(symbol: String, factor: Dec, unicode: String = symbol) :
     override val baseUnit get() = this
 }
 
-/** Temperature units (K, °C). Base unit: Kelvin (K). */
+/**
+ * Temperature units (K, °C, °F). Base unit: Kelvin (K).
+ *
+ * Temperature scales are affine: kelvin = (value + [offset]) ÷ [degreesPerKelvin],
+ * with both constants expressed in the unit's own degrees. Kelvin and Celsius have
+ * one degree per kelvin; Fahrenheit has 1.8.
+ *
+ * The inherited [factor] (1 ÷ degreesPerKelvin, the size of one degree in kelvins)
+ * exists for ordering and unit-selection only. It is rounded for Fahrenheit, so
+ * temperature value conversion never uses it: [convertValue] is overridden with
+ * exact affine math that multiplies first and divides once, keeping every
+ * terminating conversion exact (98.6°F → 37°C, 32°F → 273.15K).
+ */
 @Suppress("unused", "UNUSED_PARAMETER")
-class Temperature(symbol: String, factor: Dec, offset: Dec = Dec.ZERO, unicode: String = symbol) :
-    Unit(symbol, factor, offset, unicode) {
+class Temperature(
+    symbol: String,
+    val degreesPerKelvin: Dec = Dec.ONE,
+    offset: Dec = Dec.ZERO,
+    unicode: String = symbol
+) : Unit(symbol, Dec.ONE.divide(degreesPerKelvin, MathContext.DECIMAL128), offset, unicode) {
+
     override val baseUnit get() = getUnit("K")!! as Temperature
+
+    override fun convertValue(value: Dec, target: Unit): Dec {
+        if (target !is Temperature)
+            throw IncompatibleUnitsException(this, target)
+
+        // result = (value + offset) × targetDegreesPerKelvin ÷ degreesPerKelvin − targetOffset
+        // Multiply before the single division so terminating conversions stay exact.
+        val scaled = (value + offset).multiply(target.degreesPerKelvin)
+        return scaled.divide(degreesPerKelvin, MathContext.DECIMAL128) - target.offset
+    }
 }
 
 /** Speed/velocity units (kph, mps). Base unit: kilometers per hour (kph). */
@@ -569,51 +703,39 @@ class Density(symbol: String, factor: Dec, unicode: String = symbol) :
 }
 
 /**
- * Creates a compound unit by combining two units.
- * For example: m × m = m²
+ * Pressure units (Pa, kPa, bar, mbar, atm, mmHg, psi). Base unit: pascal (Pa).
  *
- * @param left The first unit
- * @param right The second unit
- * @return The resulting compound unit, or null if the combination is not supported
+ * Some pressure units are exact ratios with no finite decimal form (mmHg is
+ * 101325/760 Pa), so a Pressure unit stores its size as the exact rational
+ * [pascals] ÷ [per] and overrides [convertValue] to multiply first and divide
+ * once, keeping every terminating conversion exact: 760mmHg is exactly 1atm.
+ * The inherited [factor] is the rounded ratio, for ordering and
+ * unit-selection only.
  */
-fun combineUnits(left: Unit, right: Unit): Unit? {
-    return when {
-        // Length × Length = Area
-        left is Length && right is Length -> {
-            when {
-                left == Unit.nm && right == Unit.nm -> Unit.nm2
-                left == Unit.mm && right == Unit.mm -> Unit.mm2
-                left == Unit.cm && right == Unit.cm -> Unit.cm2
-                left == Unit.m && right == Unit.m -> Unit.m2
-                left == Unit.km && right == Unit.km -> Unit.km2
-                else -> Unit.m2
-            }
-        }
+@Suppress("unused", "UNUSED_PARAMETER")
+class Pressure(
+    symbol: String,
+    val pascals: Dec = Dec.ONE,
+    val per: Dec = Dec.ONE,
+    unicode: String = symbol
+) : Unit(symbol, pascals.divide(per, MathContext.DECIMAL128), unicode = unicode) {
 
-        // Length × Area = Volume
-        left is Length && right is Area -> {
-            when {
-                left == Unit.nm && right == Unit.nm2 -> Unit.nm3
-                left == Unit.mm && right == Unit.mm2 -> Unit.mm3
-                left == Unit.cm && right == Unit.cm2 -> Unit.cm3
-                left == Unit.m && right == Unit.m2 -> Unit.m3
-                left == Unit.km && right == Unit.km2 -> Unit.km3
-                else -> Unit.m3
-            }
-        }
+    override val baseUnit get() = getUnit("Pa")!! as Pressure
 
-        // Area × Length = Volume
-        left is Area && right is Length -> combineUnits(right, left)
+    override fun convertValue(value: Dec, target: Unit): Dec {
+        if (target !is Pressure)
+            throw IncompatibleUnitsException(this, target)
 
-        else -> null
+        // result = value × (pascals/per) ÷ (targetPascals/targetPer),
+        // multiplied out before the single division so terminating
+        // conversions stay exact.
+        val numerator = value.multiply(pascals).multiply(target.per)
+        val denominator = per.multiply(target.pascals)
+        return numerator.divide(denominator, MathContext.DECIMAL128)
     }
 }
 
-/**
- * Checks if two units can be combined using the combine operator.
- *
- * @param left The first unit
- * @param right The second unit
- * @return true if the units can be combined into a compound unit
- */
-fun canCombineUnits(left: Unit, right: Unit): Boolean = combineUnits(left, right) != null
+// combineUnits/canCombineUnits were removed: they returned a unit without any
+// factor correction, so mixed-prefix products (km × m) produced wrong
+// magnitudes. Quantity × Quantity and Quantity ÷ Quantity now go through
+// [UnitAlgebra], which converts operands to coherent pairing units first.

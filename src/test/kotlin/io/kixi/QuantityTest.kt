@@ -180,32 +180,29 @@ class UnitTest : FunSpec({
         }
     }
 
-    context("combineUnits") {
-        test("Length × Length = Area") {
-            combineUnits(Unit.m, Unit.m) shouldBe Unit.m2
-            combineUnits(Unit.cm, Unit.cm) shouldBe Unit.cm2
+    // combineUnits/canCombineUnits were replaced by UnitAlgebra, which
+    // converts operands to coherent pairing units instead of ignoring
+    // prefixes. Full coverage lives in UnitAlgebraTest; these check the
+    // unit-capability surface that replaced the old functions.
+    context("UnitAlgebra unit capabilities") {
+        test("Length × Length gives Area") {
+            UnitAlgebra.productUnit(Unit.m, Unit.m) shouldBe Unit.m2
+            (Quantity(2, Unit.cm) * Quantity(3, Unit.cm)).toString() shouldBe "6cm²:i"
         }
 
-        test("Length × Area = Volume") {
-            combineUnits(Unit.m, Unit.m2) shouldBe Unit.m3
+        test("Length × Area gives Volume, commuting") {
+            UnitAlgebra.productUnit(Unit.m, Unit.m2) shouldBe Unit.m3
+            UnitAlgebra.productUnit(Unit.m2, Unit.m) shouldBe Unit.m3
         }
 
-        test("Area × Length = Volume") {
-            combineUnits(Unit.m2, Unit.m) shouldBe Unit.m3
+        test("undefined combinations return null") {
+            UnitAlgebra.productUnit(Unit.m, Unit.kg) shouldBe null
         }
 
-        test("incompatible returns null") {
-            combineUnits(Unit.m, Unit.kg) shouldBe null
-        }
-    }
-
-    context("canCombineUnits") {
-        test("combinable units return true") {
-            canCombineUnits(Unit.m, Unit.m) shouldBe true
-        }
-
-        test("non-combinable return false") {
-            canCombineUnits(Unit.m, Unit.kg) shouldBe false
+        test("canMultiply and canDivide") {
+            UnitAlgebra.canMultiply(Unit.m, Unit.m) shouldBe true
+            UnitAlgebra.canMultiply(Unit.m, Unit.kg) shouldBe false
+            UnitAlgebra.canDivide(Unit.kg, Unit.L) shouldBe true
         }
     }
 })
