@@ -9,7 +9,7 @@ plugins {
 }
 
 group = "io.kixi"
-version = "2.3.2"
+version = "2.4.0"
 description = "ki-core"
 
 repositories {
@@ -100,8 +100,10 @@ publishing {
             name = "GitHubPackages"
             url = uri("https://maven.pkg.github.com/kixi-io/Ki.Core-JVM")
             credentials {
-                username = System.getenv("GITHUB_ACTOR")
-                password = System.getenv("GITHUB_TOKEN")
+                username = providers.gradleProperty("gpr.user").orNull
+                    ?: System.getenv("GITHUB_ACTOR")
+                password = providers.gradleProperty("gpr.key").orNull
+                    ?: System.getenv("GITHUB_TOKEN")
             }
         }
     }
