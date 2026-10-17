@@ -27,6 +27,8 @@ enum class Type(val kclass: KClass<*>, val supertype: Type?) {
     Grid(io.kixi.Grid::class, Any),
     Quantity(io.kixi.uom.Quantity::class, Any),
     Range(io.kixi.Range::class, Any),
+    Id(io.kixi.Id::class, Any),
+    Ref(io.kixi.Ref::class, Any),
     List(java.util.List::class, Any), Map(java.util.Map::class, Any),
 
     // nil
@@ -63,6 +65,8 @@ enum class Type(val kclass: KClass<*>, val supertype: Type?) {
             is io.kixi.Grid<*> -> Grid
             is io.kixi.uom.Quantity<*> -> Quantity
             is io.kixi.Range<*> -> Range
+            is io.kixi.Id -> Id
+            is io.kixi.Ref -> Ref
             is kotlin.collections.List<*> -> List
             is kotlin.collections.Map<*,*> -> Map
             else -> null

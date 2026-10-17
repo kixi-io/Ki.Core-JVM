@@ -287,6 +287,16 @@ class Ki {
                 return Coordinate.parseLiteral(trimmed)
             }
 
+            // Id
+            if (trimmed.startsWith(".id(")) {
+                return Id.parseLiteral(trimmed)
+            }
+
+            // Ref
+            if (trimmed.startsWith(".ref(")) {
+                return Ref.parseLiteral(trimmed)
+            }
+
             // Grid - Note: Full grid parsing requires KD parser
             if (trimmed.startsWith(".grid(") || trimmed.startsWith(".grid<")) {
                 return Grid.parseLiteral(trimmed)  // This will throw - requires KD

@@ -80,6 +80,12 @@ open class TypeDef(val type: Type, val nullable: Boolean) {
         val Grid = TypeDef(Type.Grid, false)
         val Grid_N = TypeDef(Type.Grid, true)
 
+        val Id = TypeDef(Type.Id, false)
+        val Id_N = TypeDef(Type.Id, true)
+
+        val Ref = TypeDef(Type.Ref, false)
+        val Ref_N = TypeDef(Type.Ref, true)
+
         // nil
         val nil = TypeDef(Type.nil, true)
 
@@ -111,6 +117,8 @@ open class TypeDef(val type: Type, val nullable: Boolean) {
             "GeoPoint" -> GeoPoint; "GeoPoint_N" -> GeoPoint_N
             "Coordinate" -> Coordinate; "Coordinate_N" -> Coordinate_N
             "Grid" -> Grid; "Grid_N" -> Grid_N
+            "Id" -> Id; "Id_N" -> Id_N
+            "Ref" -> Ref; "Ref_N" -> Ref_N
             "Any" -> Any; "Any_N" -> Any_N
 
             else -> null

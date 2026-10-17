@@ -50,6 +50,8 @@ import io.kixi.text.ParseException
  * | [Blob] | `.blob(SGVsbG8=)` | Binary data in Base64 |
  * | [Email] | `user@domain.com` | Email address |
  * | [GeoPoint] | `.geo(37.7749, -122.4194)` | Geographic coordinates |
+ * | [Id] | `.id(01J9A0X5K2M7N3P8Q1R6T4V9AB)` | Time-ordered unique identifier (ULID) |
+ * | [Ref] | `.ref(compounds/01J9A0X5K2M7N3P8Q1R6T4V9AB)` | Reference to a node by Id |
  * | [KiTZ] | `US/PST` | Ki timezone identifier |
  * | [KiTZDateTime] | `2024/3/15@14:30:00-US/PST` | DateTime with KiTZ |
  * | [NSID] | `namespace:name` | Namespaced identifier |
