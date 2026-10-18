@@ -18,6 +18,7 @@ enum class Type(val kclass: KClass<*>, val supertype: Type?) {
     URL(java.net.URL::class, Any),
     Date(java.time.LocalDate::class, Any), LocalDateTime(java.time.LocalDateTime::class, Any),
     ZonedDateTime(java.time.ZonedDateTime::class, Any),
+    KiTZDateTime(io.kixi.KiTZDateTime::class, Any),
     Duration(java.time.Duration::class, Any),
     Version(io.kixi.Version::class, Any),
     Blob(io.kixi.Blob::class, Any),
@@ -56,6 +57,7 @@ enum class Type(val kclass: KClass<*>, val supertype: Type?) {
             is java.time.LocalDate -> Date
             is java.time.LocalDateTime -> LocalDateTime
             is java.time.ZonedDateTime -> ZonedDateTime
+            is io.kixi.KiTZDateTime -> KiTZDateTime
             is java.time.Duration -> Duration
             is io.kixi.Version -> Version
             is io.kixi.Blob -> Blob
@@ -71,5 +73,20 @@ enum class Type(val kclass: KClass<*>, val supertype: Type?) {
             is kotlin.collections.Map<*,*> -> Map
             else -> null
         }
+
+        /**
+         * The type with this Ki name (`"Int"`, `"Dec"`, `"Date"`, `"Quantity"`), or null.
+         * `nil` is not a type name.
+         */
+        fun forName(name: kotlin.String): Type? = entries.firstOrNull { it.name == name && it != nil }
+
+        /**
+         * The Ki type of values of [javaClass]: the type whose class it is (boxed or
+         * primitive), else the collection type it implements (`ArrayList` is [List]).
+         * Null for classes outside the Ki type system.
+         */
+        fun of(javaClass: Class<*>): Type? =
+            entries.firstOrNull { it != nil && (it.kclass.javaObjectType == javaClass || it.kclass.java == javaClass) }
+                ?: arrayOf(List, Map, Grid, Quantity, Range).firstOrNull { it.kclass.java.isAssignableFrom(javaClass) }
     }
 }

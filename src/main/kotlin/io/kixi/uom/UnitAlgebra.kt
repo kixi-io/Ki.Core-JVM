@@ -55,9 +55,16 @@ class UndefinedUnitArithmeticException(
  *
  * ## Numeric types
  *
- * Follows [Quantity.convertTo]'s precedent: math runs in Dec; if both operand
- * values were Int/Long and the result is whole it demotes back (Int only when
- * both were Int), and if either operand was Double/Float the result is Double.
+ * Math runs in Dec. If either operand was Double/Float the result is Double.
+ * If both operand values were Int/Long and the result is whole, it demotes back
+ * to Int when both were Int and it fits, otherwise to Long, and stays Dec beyond
+ * Long's range; a fractional result stays Dec (as in [Quantity.convertTo]).
+ *
+ * Unlike [Quantity.convertTo], which throws when a whole result does not fit
+ * the caller's Int or Long, the algebra widens: here the algebra, not the
+ * caller, chooses the result unit, so the caller cannot pick a wider type up
+ * front. Results land in the largest display unit, so this takes values above
+ * 2.1 billion km², kg, mol or days.
  *
  * ## Host dimensions
  *

@@ -4,7 +4,6 @@ import io.kixi.text.ParseException
 import io.kixi.text.escape
 import io.kixi.text.resolveEscapes
 import io.kixi.uom.Quantity
-import java.lang.Math.abs
 import java.math.BigDecimal as Dec
 import java.net.URL
 import java.time.*
@@ -926,20 +925,14 @@ class Ki {
                         .plus(Duration.ofHours((sign + parts[1]).toLong()))
                         .plus(
                             Duration.ofMinutes((sign + parts[2]).toLong())
-                                .plus(
-                                    if (sign == "-") Duration.ofNanos(-secStringToNanos(parts[3]))
-                                    else Duration.ofNanos(secStringToNanos(parts[3]))
-                                )
+                                .plus(secondsText(parts[3], negative = sign == "-"))
                         )
                 }
                 3 -> {
                     // is compound without day
                     Duration.ofHours(parts[0].toLong())
                         .plus(Duration.ofMinutes((sign + parts[1]).toLong()))
-                        .plus(
-                            if (sign == "-") Duration.ofNanos(-secStringToNanos(parts[2]))
-                            else Duration.ofNanos(secStringToNanos(parts[2]))
-                        )
+                        .plus(secondsText(parts[2], negative = sign == "-"))
                 }
                 1 -> {
                     when {
@@ -955,11 +948,7 @@ class Ki {
                             Duration.ofMillis(text.removeSuffix("ms").toLong())
                         text.endsWith("ns") ->
                             Duration.ofNanos(text.removeSuffix("ns").toLong())
-                        text.endsWith("s") -> {
-                            val secText = text.removeSuffix("s")
-                            if (sign == "-") Duration.ofNanos(-secStringToNanos(secText))
-                            else Duration.ofNanos(secStringToNanos(secText))
-                        }
+                        text.endsWith("s") -> secondsText(text.removeSuffix("s"), negative = sign == "-")
                         else -> throw ParseException("Unknown temporal unit in duration.")
                     }
                 }
@@ -971,17 +960,22 @@ class Ki {
 
         private const val NANO_ZEROS = "000000000"
 
-        private fun secStringToNanos(s: String): Long {
-            val dotIndex = s.indexOf('.')
-            if (dotIndex == -1)
-                return abs(s.toLong()) * 1_000_000_000L
-
-            var nanos = abs(s.substring(0, dotIndex).toLong()) * 1_000_000_000L
-            val nanoText = s.substring(dotIndex + 1)
-            val zeroPadding = NANO_ZEROS.substring(0, NANO_ZEROS.length - nanoText.length)
-            nanos += (nanoText + zeroPadding).toLong()
-
-            return nanos
+        /**
+         * A seconds component such as `45`, `5.5` or `-0.022708751` as a Duration,
+         * built from whole seconds and nanoseconds so that any value a Duration can
+         * hold parses exactly. (A Long nanosecond count overflows past ~292 years.)
+         */
+        private fun secondsText(s: String, negative: Boolean): Duration {
+            val text = s.removePrefix("-")
+            val dotIndex = text.indexOf('.')
+            val wholeText = if (dotIndex == -1) text else text.substring(0, dotIndex)
+            val nanoText = if (dotIndex == -1) "" else text.substring(dotIndex + 1)
+            if (nanoText.length > NANO_ZEROS.length)
+                throw ParseException("Duration seconds can have at most 9 fractional digits: \"$s\"")
+            val nanos = if (nanoText.isEmpty()) 0L
+            else (nanoText + NANO_ZEROS.substring(nanoText.length)).toLong()
+            val magnitude = Duration.ofSeconds(wholeText.toLong(), nanos)
+            return if (negative) magnitude.negated() else magnitude
         }
 
         // Formatting Duration ////
@@ -989,78 +983,61 @@ class Ki {
         /**
          * Format a Duration as a single unit (e.g. 5days, 6h, 7min, 8s, 12ms, 2ns) or
          * compound format such as 1day:15:23:42.532
+         *
+         * Lossless across Duration's whole range, and [parseDuration] reads the result
+         * back exactly. Below one second: nanoseconds under 1ms (`500ns`), whole
+         * milliseconds (`100ms`), otherwise fractional seconds (`0.022708751s`).
          */
         @JvmStatic
         @JvmOverloads
         fun formatDuration(duration: Duration, zeroPad: Boolean = false): String {
-            var totalNanos = duration.toNanos()
-            val sign = if (totalNanos < 0L) "-" else ""
-            totalNanos = abs(totalNanos)
-
-            val nanosOfSec = totalNanos % 1_000_000_000L
-
-            val fractionalSec = if (nanosOfSec == 0L) ""
-            else "." + trimTrailing0s(String.format("%09d", nanosOfSec))
-
-            var secs = abs(duration.toSecondsPart())
-            if (sign == "-" && nanosOfSec > 0) {
-                secs--
+            // Magnitude as (seconds, nanos). Negating the Duration would overflow for
+            // Duration.ofSeconds(Long.MIN_VALUE); as a ULong, -Long.MIN_VALUE is the
+            // right magnitude, 2^63.
+            val negative = duration.isNegative
+            val absSecs: ULong
+            val absNanos: Int
+            if (!negative) {
+                absSecs = duration.seconds.toULong()
+                absNanos = duration.nano
+            } else if (duration.nano == 0) {
+                absSecs = (-duration.seconds).toULong()
+                absNanos = 0
+            } else {
+                absSecs = (-(duration.seconds + 1)).toULong()
+                absNanos = 1_000_000_000 - duration.nano
             }
+            val sign = if (negative) "-" else ""
+            val fractionalSec = if (absNanos == 0) ""
+            else "." + trimTrailing0s(String.format("%09d", absNanos))
 
             // Single unit Durations
-            if (totalNanos < 1_000_000L) {
-                return "$sign${totalNanos}ns"
-            } else if (totalNanos < 1_000_000_000L) {
-                return "$sign${totalNanos / 1_000_000L}ms"
-            } else if (totalNanos < 60_000_000_000L) {
-                return "${sign}${secs}${fractionalSec}s"
+            if (absSecs == 0uL) {
+                return when {
+                    absNanos < 1_000_000 -> "$sign${absNanos}ns"
+                    absNanos % 1_000_000 == 0 -> "$sign${absNanos / 1_000_000}ms"
+                    else -> "${sign}0${fractionalSec}s"
+                }
             }
+            if (absSecs < 60uL) return "$sign$absSecs${fractionalSec}s"
 
-            val days = abs(duration.toDaysPart())
-            val hrs = abs(duration.toHoursPart())
-            val mins = abs(duration.toMinutesPart())
+            val days = absSecs / 86_400uL
+            val hrs = ((absSecs % 86_400uL) / 3_600uL).toInt()
+            val mins = ((absSecs % 3_600uL) / 60uL).toInt()
+            val secs = (absSecs % 60uL).toInt()
+            val whole = fractionalSec.isEmpty()
 
             // Compound Durations
-            if (days != 0L) {
-                if (all0(hrs, mins, secs) && fractionalSec.isEmpty())
-                    return "$sign${days}${if (days == 1L) "day" else "days"}"
-
-                return if (zeroPad) {
-                    "$sign${days}${if (days == 1L) "day" else "days"}:" +
-                            "${padL2(hrs)}:${padL2(mins)}:${padL2(secs)}$fractionalSec"
-                } else {
-                    "$sign${days}${if (days == 1L) "day" else "days"}:$hrs:$mins:$secs$fractionalSec"
-                }
-            } else if (hrs != 0) {
-                if (all0(days, mins, secs) && fractionalSec.isEmpty())
-                    return "$sign${hrs}h"
-
-                return if (zeroPad) {
-                    "$sign${padL2(hrs)}:${padL2(mins)}:${padL2(secs)}$fractionalSec"
-                } else {
-                    "$sign$hrs:$mins:$secs$fractionalSec"
-                }
-            } else if (mins != 0) {
-                if (all0(days, hrs, secs) && fractionalSec.isEmpty())
-                    return "$sign${mins}min"
-
-                return if (zeroPad) {
-                    "$sign${padL2(hrs)}:${padL2(mins)}:${padL2(secs)}$fractionalSec"
-                } else {
-                    "$sign$hrs:$mins:$secs$fractionalSec"
-                }
-            } else if (secs != 0 && fractionalSec.isEmpty()) {
-                if (all0(days, hrs, mins))
-                    return "$sign${secs}s"
-
-                return if (zeroPad) {
-                    "$sign${padL2(hrs)}:${padL2(mins)}:${padL2(secs)}$fractionalSec"
-                } else {
-                    "$sign$hrs:$mins:$secs$fractionalSec"
-                }
+            if (days != 0uL) {
+                val dayText = "$sign${days}${if (days == 1uL) "day" else "days"}"
+                if (hrs == 0 && mins == 0 && secs == 0 && whole) return dayText
+                return if (zeroPad) "$dayText:${padL2(hrs)}:${padL2(mins)}:${padL2(secs)}$fractionalSec"
+                else "$dayText:$hrs:$mins:$secs$fractionalSec"
             }
-
-            return "0:0:0"
+            if (hrs != 0 && mins == 0 && secs == 0 && whole) return "$sign${hrs}h"
+            if (hrs == 0 && secs == 0 && whole) return "$sign${mins}min"
+            return if (zeroPad) "$sign${padL2(hrs)}:${padL2(mins)}:${padL2(secs)}$fractionalSec"
+            else "$sign$hrs:$mins:$secs$fractionalSec"
         }
 
         private fun padL2(num: Any): String = String.format("%02d", num)
@@ -1079,16 +1056,6 @@ class Ki {
             }
 
             return numText.substring(0, end)
-        }
-
-        private fun all0(vararg args: Number): Boolean {
-            for (num in args) {
-                when (num) {
-                    is Int -> if (num != 0) return false
-                    is Long -> if (num != 0L) return false
-                }
-            }
-            return true
         }
     }
 }

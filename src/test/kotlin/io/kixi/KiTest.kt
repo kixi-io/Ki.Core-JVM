@@ -4,12 +4,14 @@ import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
 import io.kotest.assertions.throwables.shouldThrow
+import io.kotest.assertions.withClue
 import io.kixi.text.ParseException
 import io.kixi.uom.Quantity
 import java.math.BigDecimal as Dec
 import java.net.URL
 import java.time.*
 import kotlin.reflect.typeOf
+import kotlin.random.Random
 
 class KiTest : FunSpec({
 
@@ -351,6 +353,67 @@ class KiTest : FunSpec({
             Ki.typeOf(null) shouldBe Type.nil
             Ki.typeOf("test") shouldBe Type.String
             Ki.typeOf(42) shouldBe Type.Int
+        }
+    }
+
+    context("Duration text is exact across Duration's whole range") {
+        fun roundTrip(d: Duration) {
+            val text = Ki.formatDuration(d)
+            withClue("$d as \"$text\"") { Ki.parseDuration(text) shouldBe d }
+            val padded = Ki.formatDuration(d, zeroPad = true)
+            withClue("$d as \"$padded\" (zero-padded)") { Ki.parseDuration(padded) shouldBe d }
+        }
+
+        test("negative fractions that borrow across a minute, hour or day boundary") {
+            Ki.formatDuration(Duration.ofMillis(-59_500)) shouldBe "-59.5s"
+            Ki.formatDuration(Duration.ofMillis(-119_500)) shouldBe "-0:1:59.5"
+            Ki.formatDuration(Duration.ofMillis(-3_599_500)) shouldBe "-0:59:59.5"
+            Ki.formatDuration(Duration.ofMillis(-86_399_500)) shouldBe "-23:59:59.5"
+            Ki.formatDuration(Duration.ofMillis(-172_799_500)) shouldBe "-1day:23:59:59.5"
+            for (ms in listOf(-59_500L, -119_500L, -3_599_500L, -86_399_500L, -172_799_500L, -1_500L, -90_061_500L))
+                roundTrip(Duration.ofMillis(ms))
+        }
+
+        test("sub-millisecond detail under a second is kept, as fractional seconds") {
+            Ki.formatDuration(Duration.ofNanos(22_708_751)) shouldBe "0.022708751s"
+            Ki.formatDuration(Duration.ofNanos(-22_708_751)) shouldBe "-0.022708751s"
+            Ki.formatDuration(Duration.ofNanos(1_000_001)) shouldBe "0.001000001s"
+            Ki.formatDuration(Duration.ofNanos(999_999)) shouldBe "999999ns"
+            Ki.formatDuration(Duration.ofMillis(22)) shouldBe "22ms"
+            Ki.formatDuration(Duration.ZERO) shouldBe "0ns"
+            roundTrip(Duration.ofNanos(22_708_751))
+            roundTrip(Duration.ofNanos(-22_708_751))
+        }
+
+        test("beyond 292 years, up to Duration's limits") {
+            Ki.formatDuration(Duration.ofDays(365L * 300)) shouldBe "109500days"
+            val max = Duration.ofSeconds(Long.MAX_VALUE, 999_999_999)
+            val min = Duration.ofSeconds(Long.MIN_VALUE)
+            Ki.formatDuration(max) shouldBe "106751991167300days:15:30:7.999999999"
+            Ki.formatDuration(min) shouldBe "-106751991167300days:15:30:8"
+            roundTrip(max)
+            roundTrip(min)
+            roundTrip(Duration.ofSeconds(Long.MIN_VALUE, 1))
+        }
+
+        test("large seconds parse exactly instead of wrapping") {
+            Ki.parseDuration("10000000000s") shouldBe Duration.ofSeconds(10_000_000_000L)
+            Ki.parseDuration("-10000000000.5s") shouldBe Duration.ofSeconds(-10_000_000_000L, -500_000_000)
+            Ki.parseDuration("1:0:10000000000") shouldBe Duration.ofHours(1).plusSeconds(10_000_000_000L)
+            shouldThrow<ParseException> { Ki.parseDuration("1.0000000001s") }
+        }
+
+        test("random durations, small to huge, round-trip through text") {
+            val r = Random(20261018)
+            repeat(20_000) {
+                val d = when (r.nextInt(4)) {
+                    0 -> Duration.ofNanos(r.nextLong() shr r.nextInt(63))                    // ns to ±292 years
+                    1 -> Duration.ofSeconds(r.nextLong(), r.nextLong(0, 1_000_000_000))      // anywhere
+                    2 -> Duration.ofMillis(r.nextLong(-200_000_000, 200_000_000))           // minutes to days, ms steps
+                    else -> Duration.ofSeconds(r.nextLong(-200_000, 200_000), r.nextLong(0, 1_000_000_000))
+                }
+                roundTrip(d)
+            }
         }
     }
 })

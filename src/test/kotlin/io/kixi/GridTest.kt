@@ -799,4 +799,33 @@ class GridTest : StringSpec({
         str.contains(".grid<Int>") shouldBe true
         str.contains(".grid<Int?>") shouldBe false
     }
+
+    "toString writes cells in KD syntax and the header with Ki type names" {
+        val dates = Grid<java.time.LocalDate>(2, 1, arrayOf(java.time.LocalDate.of(2020, 1, 1), java.time.LocalDate.of(2020, 12, 31)), java.time.LocalDate::class.java, false)
+        dates.toString().lines().map { it.trim() } shouldContainExactly listOf(".grid<Date> {", "2020/1/1  2020/12/31", "}")
+        val chars = Grid<Char>(2, 1, arrayOf('a', 'b'), Char::class.javaObjectType, false)
+        chars.toString().lines()[1].trim() shouldBe "'a'  'b'"
+        chars.toString().lines()[0] shouldBe ".grid<Char> {"
+    }
+
+    "a typed numeric grid writes numbers without a suffix; an untyped one keeps them" {
+        val longs = Grid<Long>(2, 1, arrayOf(1L, 2L), Long::class.javaObjectType, false)
+        longs.toString().lines()[1].trim() shouldBe "1  2"
+        val decs = Grid<java.math.BigDecimal>(2, 1, arrayOf(java.math.BigDecimal("1.5"), java.math.BigDecimal("2")), java.math.BigDecimal::class.java, false)
+        decs.toString().lines().map { it.trim() }.take(2) shouldContainExactly listOf(".grid<Dec> {", "1.5  2")
+        val mixed = Grid<Number>(2, 1, arrayOf(1L, java.math.BigDecimal("1.5")), Number::class.java, false)
+        mixed.toString().lines()[1].trim() shouldBe "1L  1.5bd"
+    }
+
+    "the header is left out when a cell does not match it or the class is not a Ki type" {
+        val wrong = Grid<Any>(2, 1, arrayOf(1, "a"), Int::class.javaObjectType, false)
+        wrong.toString().lines()[0] shouldBe ".grid {"
+        val host = Grid<Thread>(1, 1, arrayOf(Thread.currentThread()), Thread::class.java, false)
+        host.toString().lines()[0] shouldBe ".grid {"
+    }
+
+    "a non-nullable typed grid that holds nil is written as nullable, so the text reads back" {
+        val g = Grid<Int>(2, 1, arrayOf(1, null), Int::class.javaObjectType, false)
+        g.toString().lines()[0] shouldBe ".grid<Int?> {"
+    }
 })

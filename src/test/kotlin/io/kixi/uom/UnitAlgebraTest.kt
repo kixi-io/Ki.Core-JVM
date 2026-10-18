@@ -129,12 +129,15 @@ class UnitAlgebraTest : FunSpec({
         }
     }
 
-    context("numeric typing follows convertTo's precedent") {
+    context("numeric typing: Dec math, whole integral results demoted") {
         test("Double operands give Double results") {
             (Quantity(2.0, Unit.cm) * Quantity(3, Unit.cm)).toString() shouldBe "6.0cm²:d"
         }
         test("Dec stays Dec") {
             (Quantity(Dec("2"), Unit.cm) * Quantity(3, Unit.cm)).toString() shouldBe "6cm²"
+        }
+        test("a whole integral result too large for Int widens to Long (convertTo would throw)") {
+            (Quantity(100_000, Unit.km) * Quantity(100_000, Unit.km)).toString() shouldBe "10000000000km²:L"
         }
         test("integral operands with a non-whole result promote to Dec") {
             val conc = Quantity(1, Unit.mol) / Quantity(3, Unit.L)

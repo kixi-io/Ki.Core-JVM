@@ -377,4 +377,28 @@ class QuantityDefTest : FunSpec({
             QuantityDef(false, Length::class, Type.Dec).generic shouldBe true
         }
     }
+
+    context("names and classes") {
+        test("KiTZDateTime is a type") {
+            Ki.typeOf(KiTZDateTime(2024, 3, 15, 9, 0, 0, KiTZ.JP_JST)) shouldBe Type.KiTZDateTime
+        }
+        test("forName finds every type by its Ki name, but not nil") {
+            Type.forName("Date") shouldBe Type.Date
+            Type.forName("Quantity") shouldBe Type.Quantity
+            Type.forName("Dec") shouldBe Type.Dec
+            Type.forName("nil").shouldBeNull()
+            Type.forName("LocalDate").shouldBeNull()
+            Type.entries.filter { it != Type.nil }.forEach { Type.forName(it.name) shouldBe it }
+        }
+        test("of maps boxed, primitive and collection classes") {
+            Type.of(Int::class.javaObjectType) shouldBe Type.Int
+            Type.of(Int::class.javaPrimitiveType!!) shouldBe Type.Int
+            Type.of(LocalDate::class.java) shouldBe Type.Date
+            Type.of(Dec::class.java) shouldBe Type.Dec
+            Type.of(java.util.ArrayList::class.java) shouldBe Type.List
+            Type.of(java.util.LinkedHashMap::class.java) shouldBe Type.Map
+            Type.of(Quantity::class.java) shouldBe Type.Quantity
+            Type.of(Thread::class.java).shouldBeNull()
+        }
+    }
 })

@@ -160,6 +160,16 @@ class Quantity<T : Unit> : Comparable<Quantity<T>> {
      *
      * The numeric type is preserved when possible. If the conversion produces
      * a non-whole number and the value is Int or Long, the result will be promoted to Dec.
+     * If it produces a whole number too large for the Int or Long, this throws
+     * [ArithmeticException] rather than returning a wrapped value, like
+     * `String.toInt()` and `Math.toIntExact`. Double and Float follow IEEE rules
+     * (out-of-range results become infinite).
+     *
+     * ```kotlin
+     * Quantity(1500, Unit.mm) convertTo Unit.m    // 1.5m (Dec)
+     * Quantity(781, Unit.day) convertTo Unit.ms   // ArithmeticException: 67478400000 does not fit in Int
+     * Quantity(781L, Unit.day) convertTo Unit.ms  // 67478400000ms:L
+     * ```
      *
      * For temperature conversions, this properly handles the offset between
      * Celsius, Fahrenheit and Kelvin (e.g., 0°C = 273.15K = 32°F).
@@ -167,6 +177,7 @@ class Quantity<T : Unit> : Comparable<Quantity<T>> {
      * @param otherUnit The target unit (must be of the same dimension)
      * @return A new Quantity with the converted value and target unit
      * @throws IncompatibleUnitsException if the units have different dimensions
+     * @throws ArithmeticException if a whole Int or Long result does not fit its type
      */
     infix fun convertTo(otherUnit: T): Quantity<T> {
         val decValue = when (value) {
@@ -179,11 +190,11 @@ class Quantity<T : Unit> : Comparable<Quantity<T>> {
         return when (value) {
             is Dec -> Quantity(converted, otherUnit)
             is Int -> {
-                if (converted.whole) Quantity(converted.toInt(), otherUnit)
+                if (converted.whole) Quantity(exactOrThrow(converted, otherUnit, "Int") { it.intValueExact() }, otherUnit)
                 else Quantity(converted, otherUnit)
             }
             is Long -> {
-                if (converted.whole) Quantity(converted.toLong(), otherUnit)
+                if (converted.whole) Quantity(exactOrThrow(converted, otherUnit, "Long") { it.longValueExact() }, otherUnit)
                 else Quantity(converted, otherUnit)
             }
             is Double -> Quantity(converted.toDouble(), otherUnit)
@@ -191,6 +202,17 @@ class Quantity<T : Unit> : Comparable<Quantity<T>> {
             else -> throw Error("Unknown Number type in Quantity: ${value.javaClass.simpleName}")
         }
     }
+
+    /** A whole [converted] value as [type], or an [ArithmeticException] naming the fix. */
+    private inline fun <N : Number> exactOrThrow(converted: Dec, otherUnit: T, type: String, exact: (Dec) -> N): N =
+        try {
+            exact(converted)
+        } catch (e: ArithmeticException) {
+            throw ArithmeticException(
+                "$this in ${otherUnit.symbol} is ${converted.toPlainString()}, which does not fit in $type; " +
+                    "convert a ${if (type == "Int") "Long (:L) or " else ""}Dec quantity instead"
+            )
+        }
 
     /**
      * This does not consider 1cm and 10mm to be equal, because quantities use units
@@ -206,11 +228,18 @@ class Quantity<T : Unit> : Comparable<Quantity<T>> {
 
     /**
      * Returns true if this quantity represents the same physical amount as the other,
-     * even if they use different units (e.g., 1cm equivalent to 10mm).
+     * whatever the units and number types: `1cm`, `10mm:i`, `0.01m:d` and `10mm:L`
+     * are all equivalent, as are `0°C` and `273.15K`. This is `compareTo(other) == 0`,
+     * so it is exact, and NaN is equivalent to NaN as in `Double.compareTo`.
+     *
+     * Quantities of different dimensions, or in different currencies, are not
+     * equivalent (false, where [compareTo] throws).
      */
     fun equivalent(other: Quantity<T>): Boolean {
-        return this convertTo this.unit.baseUnit as T ==
-                other convertTo other.unit.baseUnit as T
+        val unit1: Unit = unit
+        val unit2: Unit = other.unit
+        if (unit1.javaClass != unit2.javaClass || (unit1 is Currency && unit1 != unit2)) return false
+        return compareTo(other) == 0
     }
 
     override fun hashCode(): Int {
@@ -219,22 +248,75 @@ class Quantity<T : Unit> : Comparable<Quantity<T>> {
         return result
     }
 
+    /**
+     * Compares the physical amounts: `1cm.compareTo(10mm)` is 0, `10°C > 20K`
+     * (10°C is 283.15K), `760mmHg.compareTo(1atm)` is 0.
+     *
+     * The comparison is exact. Both values are put on their dimension's base
+     * scale as exact ratios and cross-multiplied, so there is no rounding (not
+     * even for mmHg or °F, whose sizes have no finite decimal form) and no
+     * Int or Long conversion that could overflow. Quantities in the same unit
+     * compare their numbers directly. Infinite and NaN floating-point values are
+     * the same in every unit and order as `Double.compareTo` orders them, except
+     * that -0.0 and 0.0 are equal (so the order is the same within and across units).
+     *
+     * Like `BigDecimal.compareTo`, this is not consistent with [equals]:
+     * `1cm` and `10mm` compare as 0 but are not equal, because equality keeps
+     * the unit. Use [equivalent] for "same amount".
+     *
+     * @throws IncompatibleUnitsException if the units have different dimensions,
+     *   or are different currencies (there is no exchange rate)
+     */
     override fun compareTo(other: Quantity<T>): Int {
-        var quantity1 = this
-        var quantity2 = other
+        val unit1: Unit = unit
+        val unit2: Unit = other.unit
+        if (unit1.javaClass != unit2.javaClass || (unit1 is Currency && unit1 != unit2))
+            throw IncompatibleUnitsException(unit1, unit2)
 
-        if (unit == other.unit) {
-            // no unit conversion needed
-        } else if (this.unit.factor < other.unit.factor) {
-            quantity2 = other convertTo this.unit
-        } else if (this.unit.factor > other.unit.factor) {
-            quantity1 = this convertTo other.unit
+        val class1 = floatClass(value)
+        val class2 = floatClass(other.value)
+        if (class1 != FINITE || class2 != FINITE) return class1.compareTo(class2)
+
+        if (unit1 == unit2) {
+            // -0.0 and 0.0 are the same amount, as they are across units (and as Kotlin's == has it)
+            if (isZero(value) && isZero(other.value)) return 0
+            return compareNumbers(value, other.value)
         }
 
-        val value1 = quantity1.value
-        val value2 = quantity2.value
+        val base1 = BaseScale.of(unit1)
+        val base2 = BaseScale.of(unit2)
+        if (base1 == null || base2 == null) {
+            // A host unit with its own convertValue: compare on its base unit at DECIMAL128.
+            val baseUnit = unit1.baseUnit
+            return unit1.convertValue(decValue(value), baseUnit)
+                .compareTo(unit2.convertValue(decValue(other.value), baseUnit))
+        }
+        // (v1 + o1) × n1 / d1  vs  (v2 + o2) × n2 / d2, with every d positive
+        val left = (decValue(value) + base1.offset).multiply(base1.numerator).multiply(base2.denominator)
+        val right = (decValue(other.value) + base2.offset).multiply(base2.numerator).multiply(base1.denominator)
+        return left.compareTo(right)
+    }
 
-        return compareNumbers(value1, value2)
+    /**
+     * A unit's base-scale value as an exact ratio: `base = (value + offset) ×
+     * numerator ÷ denominator`. Null for a unit whose [Unit.convertValue] is
+     * overridden by a subclass this does not know.
+     */
+    private class BaseScale(val offset: Dec, val numerator: Dec, val denominator: Dec) {
+        companion object {
+            private val generic = java.util.concurrent.ConcurrentHashMap<Class<*>, Boolean>()
+
+            fun of(unit: Unit): BaseScale? = when (unit) {
+                is Temperature -> BaseScale(unit.offset, Dec.ONE, unit.degreesPerKelvin)
+                is Pressure -> BaseScale(Dec.ZERO, unit.pascals, unit.per)
+                else -> if (usesGenericConversion(unit)) BaseScale(unit.offset, unit.factor, Dec.ONE) else null
+            }
+
+            /** True if [unit] converts with [Unit.convertValue]'s own formula, `(value + offset) × factor`. */
+            private fun usesGenericConversion(unit: Unit): Boolean = generic.computeIfAbsent(unit.javaClass) { c ->
+                c.getMethod("convertValue", Dec::class.java, Unit::class.java).declaringClass == Unit::class.java
+            }
+        }
     }
 
     /**
@@ -594,6 +676,28 @@ class Quantity<T : Unit> : Comparable<Quantity<T>> {
          * and Double contribute the value the user wrote (0.1, not
          * 0.1000000000000000055511151231257827).
          */
+        private const val NEG_INFINITE = 0
+        private const val FINITE = 1
+        private const val POS_INFINITE = 2
+        private const val NOT_A_NUMBER = 3
+
+        /** Orders non-finite values as `Double.compareTo` does: -∞, finite, +∞, NaN. */
+        private fun floatClass(n: Number): Int = when {
+            n is Double && n.isNaN() || n is Float && n.isNaN() -> NOT_A_NUMBER
+            n is Double && n == Double.POSITIVE_INFINITY || n is Float && n == Float.POSITIVE_INFINITY -> POS_INFINITE
+            n is Double && n == Double.NEGATIVE_INFINITY || n is Float && n == Float.NEGATIVE_INFINITY -> NEG_INFINITE
+            else -> FINITE
+        }
+
+        private fun isZero(n: Number): Boolean = when (n) {
+            is Dec -> n.signum() == 0
+            is Double -> n == 0.0
+            is Float -> n == 0.0f
+            is Int -> n == 0
+            is Long -> n == 0L
+            else -> n.toDouble() == 0.0
+        }
+
         private fun decValue(n: Number): Dec = when (n) {
             is Dec -> n
             else -> Dec(n.toString())
@@ -613,6 +717,24 @@ class Quantity<T : Unit> : Comparable<Quantity<T>> {
             } else {
                 Dec(value).divide(Dec(operand), MathContext.DECIMAL128)
             }
+
+        /**
+         * The number of an `:i` or `:L` literal, which must be whole and in range:
+         * `1.5mm:i` and `99999999999mm:i` are errors, not `1mm` and a wrapped value.
+         */
+        private inline fun exactLiteral(numText: String, text: String, type: String, exact: (Dec) -> Number): Number {
+            val dec = Dec(numText)
+            return try {
+                exact(dec)
+            } catch (e: ArithmeticException) {
+                val suffix = if (type == "Int") ":i" else ":L"
+                throw NumberFormatException(
+                    if (!dec.whole) "'$text': $numText is not a whole number, so it cannot be $type ($suffix); omit $suffix for a Dec"
+                    else "'$text': $numText does not fit in $type; " +
+                        (if (type == "Int") "use :L, or " else "") + "omit $suffix for a Dec"
+                )
+            }
+        }
 
         /**
          * Parses the numeric portion and unit from a quantity string.
@@ -721,13 +843,13 @@ class Quantity<T : Unit> : Comparable<Quantity<T>> {
             val numValue: Number = when (numTypeChar) {
                 'd', 'D' -> numText.toDouble()
                 'L' -> {
-                    // For scientific notation with Long, parse as Dec first then convert
-                    Dec(numText).toLong()
+                    // Parsed as Dec first for scientific notation; exact, like String.toLong()
+                    exactLiteral(numText, text, "Long") { it.longValueExact() }
                 }
                 'f', 'F' -> numText.toFloat()
                 'i', 'I' -> {
-                    // For scientific notation with Int, parse as Dec first then convert
-                    Dec(numText).toInt()
+                    // Parsed as Dec first for scientific notation; exact, like String.toInt()
+                    exactLiteral(numText, text, "Int") { it.intValueExact() }
                 }
                 '\u0000' -> Dec(numText) // Default
                 else -> throw NumberFormatException(

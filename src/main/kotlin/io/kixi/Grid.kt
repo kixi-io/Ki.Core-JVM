@@ -686,20 +686,18 @@ class Grid<T> constructor(
             null -> elementType != null  // Default: include if elementType is set
         }
 
-        if (shouldIncludeType && elementType != null) {
-            val typeName = when (elementType) {
-                Int::class.java, java.lang.Integer::class.java -> "Int"
-                Long::class.java, java.lang.Long::class.java -> "Long"
-                Double::class.java, java.lang.Double::class.java -> "Double"
-                Float::class.java, java.lang.Float::class.java -> "Float"
-                String::class.java -> "String"
-                Boolean::class.java, java.lang.Boolean::class.java -> "Bool"
-                Number::class.java -> "Number"
-                Any::class.java -> "Any"
-                else -> elementType.simpleName
-            }
-            val nullableSuffix = if (elementNullable) "?" else ""
-            builder.append(".grid<$typeName$nullableSuffix> {\n")
+        // The header names a Ki type, and only when every cell is one, so the text reads back
+        // as this grid (a host class or a non-conforming cell drops the header).
+        val type = elementType?.let { Type.of(it) }
+        val boxed = elementType?.kotlin?.javaObjectType
+        val typed = shouldIncludeType && type != null && boxed != null &&
+                data.all { it == null || boxed.isInstance(it) }
+        // A typed numeric grid gives unsuffixed numbers its own type, so its cells need no suffix.
+        val bareNumbers = typed && type in BARE_NUMBER_TYPES
+        if (typed) {
+            // A non-nullable typed grid cannot hold nil in KD; mark the header if this one does.
+            val nullableSuffix = if (elementNullable || data.any { it == null }) "?" else ""
+            builder.append(".grid<${type!!.name}$nullableSuffix> {\n")
         } else {
             builder.append(".grid {\n")
         }
@@ -710,7 +708,7 @@ class Grid<T> constructor(
             for (x in 0 until width) {
                 @Suppress("UNCHECKED_CAST")
                 val value = data[y * width + x] as T?
-                val str = formatValue(value)
+                val str = formatValue(value, bareNumbers)
                 colWidths[x] = maxOf(colWidths[x], str.length)
             }
         }
@@ -721,7 +719,7 @@ class Grid<T> constructor(
             for (x in 0 until width) {
                 @Suppress("UNCHECKED_CAST")
                 val value = data[y * width + x] as T?
-                val str = formatValue(value)
+                val str = formatValue(value, bareNumbers)
                 builder.append(str.padStart(colWidths[x]))
                 if (x < width - 1) builder.append("  ")
             }
@@ -732,10 +730,12 @@ class Grid<T> constructor(
         return builder.toString()
     }
 
-    private fun formatValue(value: T?): String = when (value) {
-        null -> "nil"
-        is String -> Ki.format(value)
-        else -> value.toString()
+    /** A cell in KD syntax ([Ki.format]); in a typed numeric grid, numbers without a suffix. */
+    private fun formatValue(value: T?, bareNumbers: Boolean): String = when {
+        value == null -> "nil"
+        bareNumbers && value is java.math.BigDecimal -> value.stripTrailingZeros().toPlainString()
+        bareNumbers && (value is Long || value is Float) -> value.toString()
+        else -> Ki.format(value)
     }
 
     override fun equals(other: Any?): Boolean {
@@ -755,6 +755,9 @@ class Grid<T> constructor(
     // ===== Companion Object: Factory Methods =====
 
     companion object : Parseable<Grid<*>> {
+
+        /** Typed numeric grids whose cells are written without a suffix (the parser gives them the declared type). */
+        private val BARE_NUMBER_TYPES = setOf(Type.Int, Type.Long, Type.Float, Type.Double, Type.Dec)
 
         /**
          * Creates a grid with the specified dimensions, initialized with the default value.

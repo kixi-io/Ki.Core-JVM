@@ -336,23 +336,51 @@ data class KiTZDateTime(
     // Comparison ////
 
     /**
-     * Compares this KiTZDateTime to another based on the instant they represent.
+     * Compares by instant, then by local date-time, then by KiTZ id, then by country,
+     * so the order is consistent with [equals]: `compareTo` returns 0 only for equal
+     * values. This is the convention of [ZonedDateTime.compareTo].
+     *
+     * Values for different instants are ordered by instant. Two values for the same
+     * instant in different zones are not equal and do not compare as 0; the one with
+     * the earlier local date-time (the smaller UTC offset) comes first. Sorted
+     * collections (`TreeSet`, `TreeMap`, `sortedSetOf`) therefore keep both.
+     *
+     * To ask whether two values are the same instant, use [isEqual]; [isBefore] and
+     * [isAfter] also compare instants only.
+     *
+     * ```kotlin
+     * val tokyo = KiTZDateTime(2024, 3, 15, 10, 32, 0, KiTZ.JP_JST)
+     * val utc = tokyo.withKiTZ(KiTZ.UTC)   // 2024/3/15@1:32:00-UTC
+     *
+     * tokyo.isEqual(utc)       // true, same instant
+     * tokyo == utc             // false
+     * tokyo.compareTo(utc)     // > 0, same instant, later local time
+     * ```
      */
-    override fun compareTo(other: KiTZDateTime): Int =
-        toInstant().compareTo(other.toInstant())
+    override fun compareTo(other: KiTZDateTime): Int {
+        // Offsets are whole seconds, so the instant is (epoch second, local nano).
+        var c = localDateTime.toEpochSecond(offset).compareTo(other.localDateTime.toEpochSecond(other.offset))
+        if (c == 0) c = nano.compareTo(other.nano)
+        if (c == 0) c = localDateTime.compareTo(other.localDateTime)
+        if (c == 0) c = kiTZ.id.compareTo(other.kiTZ.id)
+        if (c == 0) c = kiTZ.country.compareTo(other.kiTZ.country)
+        return c
+    }
 
     /**
-     * Returns true if this instant is before the other.
+     * Returns true if this instant is before the other, whatever the zones.
      */
     fun isBefore(other: KiTZDateTime): Boolean = toInstant().isBefore(other.toInstant())
 
     /**
-     * Returns true if this instant is after the other.
+     * Returns true if this instant is after the other, whatever the zones.
      */
     fun isAfter(other: KiTZDateTime): Boolean = toInstant().isAfter(other.toInstant())
 
     /**
-     * Returns true if this represents the same instant as the other.
+     * Returns true if this represents the same instant as the other, whatever the
+     * zones. Unlike [equals] and [compareTo], `2024/3/15@10:32:00-JP/JST` and
+     * `2024/3/15@1:32:00-UTC` are the same here.
      */
     fun isEqual(other: KiTZDateTime): Boolean = toInstant() == other.toInstant()
 
