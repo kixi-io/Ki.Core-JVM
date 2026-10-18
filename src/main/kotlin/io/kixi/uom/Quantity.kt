@@ -255,8 +255,10 @@ class Quantity<T : Unit> : Comparable<Quantity<T>> {
      * The comparison is exact. Both values are put on their dimension's base
      * scale as exact ratios and cross-multiplied, so there is no rounding (not
      * even for mmHg or °F, whose sizes have no finite decimal form) and no
-     * Int or Long conversion that could overflow. Quantities in the same unit
-     * compare their numbers directly. Infinite and NaN floating-point values are
+     * Int or Long conversion that could overflow. A Float or Double counts as the
+     * decimal it prints as, within a unit as across units, so `0.1f`, `0.1` and
+     * `0.1bd` metres are equal. Quantities in the same unit with the same number
+     * type compare their numbers directly. Infinite and NaN floating-point values are
      * the same in every unit and order as `Double.compareTo` orders them, except
      * that -0.0 and 0.0 are equal (so the order is the same within and across units).
      *
@@ -892,60 +894,20 @@ class Quantity<T : Unit> : Comparable<Quantity<T>> {
         }
 
         /**
-         * Compare two Number values. Float and Double values are compared with
-         * Dec values through their decimal string form (see [decValue]).
+         * Compares two finite values in the same unit. Values of one type compare
+         * natively; mixed types compare in Ki.Core's decimal view, where a Float or
+         * Double counts as the decimal it prints as (see [decValue]), as they do across
+         * units. So `0.1f`, `0.1` and `0.1bd` are equal, `3L` equals `3.0f`, and the
+         * order stays transitive. (Kotlin's `Float.compareTo(Double)` compares binary
+         * values, which would make `0.1f` greater than `0.1` while both equal `0.1bd`.)
          */
-        private fun compareNumbers(value1: Number, value2: Number): Int {
-            return when (value1) {
-                is Int -> when (value2) {
-                    is Int -> value1.compareTo(value2)
-                    is Dec -> value1.toBigDecimal().compareTo(value2)
-                    is Long -> value1.toLong().compareTo(value2)
-                    is Double -> value1.toDouble().compareTo(value2)
-                    is Float -> value1.toFloat().compareTo(value2)
-                    else -> value1.compareTo(value2.toInt())
-                }
-                is Dec -> when (value2) {
-                    is Int -> value1.compareTo(value2.toBigDecimal())
-                    is Dec -> value1.compareTo(value2)
-                    is Long -> value1.compareTo(value2.toBigDecimal())
-                    is Double -> value1.compareTo(decValue(value2))
-                    is Float -> value1.compareTo(decValue(value2))
-                    else -> value1.compareTo(value2.toInt().toBigDecimal())
-                }
-                is Long -> when (value2) {
-                    is Int -> value1.compareTo(value2.toLong())
-                    is Dec -> value1.toBigDecimal().compareTo(value2)
-                    is Long -> value1.compareTo(value2)
-                    is Double -> value1.toDouble().compareTo(value2)
-                    is Float -> value1.toFloat().compareTo(value2)
-                    else -> value1.compareTo(value2.toLong())
-                }
-                is Double -> when (value2) {
-                    is Int -> value1.compareTo(value2.toDouble())
-                    is Dec -> decValue(value1).compareTo(value2)
-                    is Long -> value1.compareTo(value2.toDouble())
-                    is Double -> value1.compareTo(value2)
-                    is Float -> value1.compareTo(value2.toDouble())
-                    else -> value1.compareTo(value2.toDouble())
-                }
-                is Float -> when (value2) {
-                    is Int -> value1.compareTo(value2.toFloat())
-                    is Dec -> decValue(value1).compareTo(value2)
-                    is Long -> value1.toDouble().compareTo(value2.toDouble())
-                    is Double -> value1.toDouble().compareTo(value2)
-                    is Float -> value1.compareTo(value2)
-                    else -> value1.compareTo(value2.toFloat())
-                }
-                else -> when (value2) {
-                    is Int -> value1.toInt().compareTo(value2)
-                    is Dec -> value1.toInt().toBigDecimal().compareTo(value2)
-                    is Long -> value1.toLong().compareTo(value2)
-                    is Double -> value1.toDouble().compareTo(value2)
-                    is Float -> value1.toFloat().compareTo(value2)
-                    else -> value1.toInt().compareTo(value2.toInt())
-                }
-            }
+        private fun compareNumbers(value1: Number, value2: Number): Int = when {
+            value1 is Int && value2 is Int -> value1.compareTo(value2)
+            value1 is Long && value2 is Long -> value1.compareTo(value2)
+            value1 is Double && value2 is Double -> value1.compareTo(value2)
+            value1 is Float && value2 is Float -> value1.compareTo(value2)
+            value1 is Dec && value2 is Dec -> value1.compareTo(value2)
+            else -> decValue(value1).compareTo(decValue(value2))
         }
 
         // Convenience factory methods for specific unit types

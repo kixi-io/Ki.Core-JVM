@@ -546,6 +546,24 @@ class QuantityTest : FunSpec({
             Quantity(1.5f, Unit.km).compareTo(Quantity(1500L, Unit.m)) shouldBe 0
         }
 
+        test("mixed number types in one unit compare as decimals, as across units, so the order is transitive") {
+            // A Float or Double counts as the decimal it prints as. Comparing them in binary
+            // made 0.1f greater than 0.1, although both equal 0.1bd and 100mm.
+            val f = Quantity(0.1f, Unit.m)
+            val d = Quantity(0.1, Unit.m)
+            val bd = Quantity(Dec("0.1"), Unit.m)
+            f.compareTo(bd) shouldBe 0
+            d.compareTo(bd) shouldBe 0
+            f.compareTo(d) shouldBe 0
+            f.compareTo(Quantity(Dec("100"), Unit.mm)) shouldBe 0
+            Quantity(3L, Unit.m).compareTo(Quantity(3.0f, Unit.m)) shouldBe 0
+            // 1.523735E9f is the Float nearest 1523735040; it prints as 1523735000
+            Quantity(1_523_735_040, Unit.m) shouldBeGreaterThan Quantity(1.523735E9f, Unit.m)
+            // 2^53 + 1 as a Long, against the Double nearest to it
+            Quantity(9_007_199_254_740_993L, Unit.m) shouldBeGreaterThan Quantity(9.007199254740992E15, Unit.m)
+            listOf(d, f, bd, Quantity(Dec("0.10"), Unit.m)).sorted().size shouldBe 4
+        }
+
         test("infinite and NaN values are the same in every unit") {
             Quantity(Double.POSITIVE_INFINITY, Unit.mm) shouldBeGreaterThan Quantity(Long.MAX_VALUE, Unit.km)
             Quantity(Double.NEGATIVE_INFINITY, Unit.km) shouldBeLessThan Quantity(Long.MIN_VALUE, Unit.mm)
@@ -573,20 +591,34 @@ class QuantityTest : FunSpec({
                 return Dec(q.value.toString()).multiply(p.pascals).divide(p.per, mc)
             }
             fun metres(q: Quantity<*>): Dec = Dec(q.value.toString()).multiply(q.unit.factor)
-            val numbers = Arb.bind(Arb.int(0, 3), Arb.long(-2_000_000L, 2_000_000L), Arb.int(0, 6)) { kind, n, scale ->
+            val numbers = Arb.bind(Arb.int(0, 5), Arb.long(-2_000_000L, 2_000_000L), Arb.int(0, 6)) { kind, n, scale ->
                 when (kind) {
                     0 -> n.toInt()
                     1 -> n
                     2 -> Dec.valueOf(n, scale)
-                    else -> Dec.valueOf(n, scale).toDouble()
+                    3 -> Dec.valueOf(n, scale).toDouble()
+                    4 -> Dec.valueOf(n, scale).toFloat()
+                    else -> n * 1_000_000_007L   // beyond 2^53 for most n, where a Long is not exactly a Double
+                }
+            }
+            // The same decimal in another number type (0.1f for 0.1, 3.0 for 3L), so ties are common
+            fun retype(v: Number, kind: Int): Number {
+                val d = Dec(v.toString())
+                return when (kind) {
+                    0 -> d
+                    1 -> d.toDouble()
+                    2 -> d.toFloat()
+                    else -> if (d.stripTrailingZeros().scale() <= 0) d.toLong() else d
                 }
             }
             suspend fun <U : Unit> check(units: List<U>, toBase: (Quantity<*>) -> Dec) {
-                checkAll(2_000, numbers, Arb.element(units), numbers, Arb.element(units)) { v1, u1, v2, u2 ->
+                checkAll(2_000, numbers, Arb.element(units), numbers, Arb.element(units), Arb.int(0, 3)) { v1, u1, v2, u2, kind ->
                     val a = Quantity<U>(v1, u1)
                     val b = Quantity<U>(v2, u2)
                     a.compareTo(b) shouldBe toBase(a).compareTo(toBase(b))
                     a.compareTo(b) shouldBe -b.compareTo(a)
+                    val c = Quantity<U>(retype(v1, kind), if (kind % 2 == 0) u1 else u2)
+                    a.compareTo(c) shouldBe toBase(a).compareTo(toBase(c))
                 }
             }
             check(temps, ::kelvin)
