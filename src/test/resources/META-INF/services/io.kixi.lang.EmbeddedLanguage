@@ -1,0 +1,4 @@
+# Test languages discovered through ServiceLoader (EmbeddedLanguageTest).
+# The missing class is deliberate: one broken entry must not hide the others.
+io.kixi.lang.DoesNotExist
+io.kixi.lang.EchoLanguage
