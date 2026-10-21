@@ -2,7 +2,6 @@ package io.kixi
 
 import io.kixi.text.ParseException
 import kotlin.collections.ArrayList
-import kotlin.collections.HashMap
 
 /**
  * A Call is a [KTS](https://github.com/kixi-io/Ki.Docs/wiki/Ki-Types) type that
@@ -45,10 +44,13 @@ open class Call {
         get() = _values ?: ArrayList<Any?>().also { _values = it }
 
     /**
-     * The named arguments (attributes). Lazily initialized on first access.
+     * The named arguments (attributes), in the order they were added, as a
+     * Kotlin `mutableMapOf` keeps them (and as KD's map literals do). Lazily
+     * initialized on first access. Order counts for [toString], not for
+     * [equals]: see [canonicalText].
      */
     val attributes: MutableMap<NSID, Any?>
-        get() = _attributes ?: HashMap<NSID, Any?>().also { _attributes = it }
+        get() = _attributes ?: LinkedHashMap<NSID, Any?>().also { _attributes = it }
 
     // ===== NSID-based Constructors =====
 
@@ -165,7 +167,22 @@ open class Call {
      */
     val attributeCount: Int get() = _attributes?.size ?: 0
 
-    override fun toString(): String {
+    override fun toString(): String = render(canonical = false)
+
+    /**
+     * The text [equals] and [hashCode] compare: [toString] with the attributes
+     * in key order, so two calls that differ only in the order of their
+     * attributes are equal, as two maps with the same entries are. Subclasses
+     * that print more than values and attributes (a KD `Tag` prints its
+     * annotations and children) override it to include that, canonically too.
+     */
+    open fun canonicalText(): String = render(canonical = true)
+
+    /** The attributes in the order [toString] (insertion) or [canonicalText] (key) writes them. */
+    protected fun attributeEntries(canonical: Boolean): Collection<Map.Entry<NSID, Any?>> =
+        if (!canonical || attributeCount < 2) attributes.entries else attributes.entries.sortedBy { it.key.toString() }
+
+    private fun render(canonical: Boolean): String {
         if (!hasValues() && !hasAttributes())
             return "$nsid()"
 
@@ -188,7 +205,7 @@ open class Call {
                 builder.append(", ")
             }
 
-            val i = attributes.entries.iterator()
+            val i = attributeEntries(canonical).iterator()
             while (i.hasNext()) {
                 val e = i.next()
                 builder.append("${e.key}=${Ki.format(e.value)}")
@@ -284,7 +301,7 @@ open class Call {
             return emptyMap<String, T>()
         }
 
-        val map = HashMap<String, Any?>()
+        val map = LinkedHashMap<String, Any?>()
         for (e in attributes.entries) {
             if (e.key.namespace == namespace)
                 map[e.key.name] = e.value
@@ -337,16 +354,17 @@ open class Call {
 
     /**
      * Returns true if this tag entity (including its values and attributes) is
-     * equivalent to the given tag entity.
+     * equivalent to the given tag entity. The order of the attributes does not
+     * count (it does for [toString]): see [canonicalText].
      *
      * @return true if the tag entities are equivalent
      */
-    override fun equals(other: Any?): Boolean = other is Call && other.toString() == toString()
+    override fun equals(other: Any?): Boolean = other is Call && other.canonicalText() == canonicalText()
 
     /**
-     * @return The hash (based on the output from toString())
+     * @return The hash of [canonicalText], so equal calls hash alike whatever their attribute order
      */
-    override fun hashCode(): Int = toString().hashCode()
+    override fun hashCode(): Int = canonicalText().hashCode()
 
     companion object : Parseable<Call> {
         /**
