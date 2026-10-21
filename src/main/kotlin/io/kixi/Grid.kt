@@ -688,7 +688,8 @@ class Grid<T> constructor(
 
         // The header names a Ki type, and only when every cell is one, so the text reads back
         // as this grid (a host class or a non-conforming cell drops the header).
-        val type = elementType?.let { Type.of(it) }
+        // A type bag's class has no Ki type name (Type.Ext is not one), so such a grid is written untyped.
+        val type = elementType?.let { Type.of(it) }?.takeIf { it != Type.Ext }
         val boxed = elementType?.kotlin?.javaObjectType
         val typed = shouldIncludeType && type != null && boxed != null &&
                 data.all { it == null || boxed.isInstance(it) }

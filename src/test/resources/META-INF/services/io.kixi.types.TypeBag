@@ -1,0 +1,8 @@
+# Test type bags discovered through ServiceLoader (TypeBagsTest).
+# The missing class, the clash, the missing requirement and the throwing getter are deliberate: each must
+# be skipped and reported in TypeBags.problems without hiding DiscoveredBag.
+io.kixi.types.DoesNotExist
+io.kixi.types.DiscoveredBag
+io.kixi.types.ClashingBag
+io.kixi.types.NeedyBag
+io.kixi.types.ThrowingBag

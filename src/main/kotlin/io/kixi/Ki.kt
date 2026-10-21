@@ -1,6 +1,7 @@
 package io.kixi
 
 import io.kixi.text.ParseException
+import io.kixi.types.TypeBags
 import io.kixi.text.escape
 import io.kixi.text.resolveEscapes
 import io.kixi.uom.Quantity
@@ -140,7 +141,7 @@ class Ki {
                 is Version -> obj.toString()
                 is Range<*> -> obj.toString()
                 is Quantity<*> -> obj.toString()
-                else -> obj.toString()
+                else -> TypeBags.format(obj) ?: obj.toString()   // a type bag's value; an ExtLiteral prints as written
             }
         }
 
@@ -299,6 +300,24 @@ class Ki {
             // Grid - Note: Full grid parsing requires KD parser
             if (trimmed.startsWith(".grid(") || trimmed.startsWith(".grid<")) {
                 return Grid.parseLiteral(trimmed)  // This will throw - requires KD
+            }
+
+            // A type bag's literal (`.dna("ATG")`). An unknown name is an error here; KD keeps it as an ExtLiteral.
+            if (firstChar == '.' && trimmed.length > 1 && trimmed[1].isLetter()) {
+                val name = trimmed.drop(1).takeWhile { it.isLetter() }
+                val type = TypeBags.literal(name)
+                if (type == null && trimmed.getOrNull(name.length + 1) == '(') {
+                    throw ParseException("Unknown literal .$name(…): no loaded type bag reads it")
+                }
+                type?.let {
+                    return try {
+                        it.parse(trimmed)
+                    } catch (e: ParseException) {
+                        throw e
+                    } catch (e: Exception) {
+                        throw ParseException("Invalid .$name literal: ${e.message}", cause = e)
+                    }
+                }
             }
 
             // Version (x.y.z pattern, no @ symbol, contains dots)

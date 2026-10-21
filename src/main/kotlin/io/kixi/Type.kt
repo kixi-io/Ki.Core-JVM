@@ -32,6 +32,14 @@ enum class Type(val kclass: KClass<*>, val supertype: Type?) {
     Ref(io.kixi.Ref::class, Any),
     List(java.util.List::class, Any), Map(java.util.Map::class, Any),
 
+    /**
+     * A value of a type from a type bag (`io.kixi.types`), or an [io.kixi.types.ExtLiteral]
+     * whose bag is not loaded. Its [kclass] is `ExtLiteral`; test a value with
+     * [typeOf], and find its bag type with `TypeBags.typeFor`. Not a type name:
+     * [forName] does not return it, and a schema names the bag's type instead.
+     */
+    Ext(io.kixi.types.ExtLiteral::class, Any),
+
     // nil
     nil(KClass::class,null);
 
@@ -71,22 +79,26 @@ enum class Type(val kclass: KClass<*>, val supertype: Type?) {
             is io.kixi.Ref -> Ref
             is kotlin.collections.List<*> -> List
             is kotlin.collections.Map<*,*> -> Map
-            else -> null
+            is io.kixi.types.ExtLiteral -> Ext
+            else -> if (io.kixi.types.TypeBags.typeFor(obj) != null) Ext else null
         }
 
         /**
          * The type with this Ki name (`"Int"`, `"Dec"`, `"Date"`, `"Quantity"`), or null.
          * `nil` is not a type name.
          */
-        fun forName(name: kotlin.String): Type? = entries.firstOrNull { it.name == name && it != nil }
+        fun forName(name: kotlin.String): Type? = entries.firstOrNull { it.name == name && it != nil && it != Ext }
 
         /**
          * The Ki type of values of [javaClass]: the type whose class it is (boxed or
-         * primitive), else the collection type it implements (`ArrayList` is [List]).
-         * Null for classes outside the Ki type system.
+         * primitive), else the collection type it implements (`ArrayList` is [List]),
+         * else [Ext] for a class of a type bag (or an `ExtLiteral`). Null for classes
+         * outside the Ki type system.
          */
         fun of(javaClass: Class<*>): Type? =
-            entries.firstOrNull { it != nil && (it.kclass.javaObjectType == javaClass || it.kclass.java == javaClass) }
+            entries.firstOrNull { it != nil && it != Ext && (it.kclass.javaObjectType == javaClass || it.kclass.java == javaClass) }
                 ?: arrayOf(List, Map, Grid, Quantity, Range).firstOrNull { it.kclass.java.isAssignableFrom(javaClass) }
+                ?: if (io.kixi.types.ExtLiteral::class.java.isAssignableFrom(javaClass) ||
+                    io.kixi.types.TypeBags.typeForClass(javaClass) != null) Ext else null
     }
 }

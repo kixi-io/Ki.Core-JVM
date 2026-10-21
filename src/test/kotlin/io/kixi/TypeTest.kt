@@ -382,13 +382,14 @@ class QuantityDefTest : FunSpec({
         test("KiTZDateTime is a type") {
             Ki.typeOf(KiTZDateTime(2024, 3, 15, 9, 0, 0, KiTZ.JP_JST)) shouldBe Type.KiTZDateTime
         }
-        test("forName finds every type by its Ki name, but not nil") {
+        test("forName finds every type by its Ki name, but not nil or Ext") {
             Type.forName("Date") shouldBe Type.Date
             Type.forName("Quantity") shouldBe Type.Quantity
             Type.forName("Dec") shouldBe Type.Dec
             Type.forName("nil").shouldBeNull()
+            Type.forName("Ext").shouldBeNull()       // extension values are named by their bag's types
             Type.forName("LocalDate").shouldBeNull()
-            Type.entries.filter { it != Type.nil }.forEach { Type.forName(it.name) shouldBe it }
+            Type.entries.filter { it != Type.nil && it != Type.Ext }.forEach { Type.forName(it.name) shouldBe it }
         }
         test("of maps boxed, primitive and collection classes") {
             Type.of(Int::class.javaObjectType) shouldBe Type.Int
