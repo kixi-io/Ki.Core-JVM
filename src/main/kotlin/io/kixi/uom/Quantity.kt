@@ -242,11 +242,8 @@ class Quantity<T : Unit> : Comparable<Quantity<T>> {
         return compareTo(other) == 0
     }
 
-    override fun hashCode(): Int {
-        var result = value.hashCode()
-        result = 31 * result + unit.hashCode()
-        return result
-    }
+    // From the text equals compares, so equal quantities hash alike (1.5cm and 1.50cm, whose Decs hash differently).
+    override fun hashCode(): Int = 31 * value::class.hashCode() + toString().hashCode()
 
     /**
      * Compares the physical amounts: `1cm.compareTo(10mm)` is 0, `10°C > 20K`
@@ -296,6 +293,37 @@ class Quantity<T : Unit> : Comparable<Quantity<T>> {
         // (v1 + o1) × n1 / d1  vs  (v2 + o2) × n2 / d2, with every d positive
         val left = (decValue(value) + base1.offset).multiply(base1.numerator).multiply(base2.denominator)
         val right = (decValue(other.value) + base2.offset).multiply(base2.numerator).multiply(base1.denominator)
+        return left.compareTo(right)
+    }
+
+    /**
+     * Compares this quantity with [other] as amounts of difference (an uncertainty, a
+     * width) rather than as readings: as [compareTo], exact, but without a unit's
+     * offset, so `0.5°C` and `0.9°F` compare as equal (both are 0.5K of difference).
+     */
+    internal fun compareDifference(other: Quantity<*>): Int {
+        val unit1: Unit = unit
+        val unit2: Unit = other.unit
+        if (unit1.javaClass != unit2.javaClass || (unit1 is Currency && unit1 != unit2))
+            throw IncompatibleUnitsException(unit1, unit2)
+        val class1 = floatClass(value)
+        val class2 = floatClass(other.value)
+        if (class1 != FINITE || class2 != FINITE) return class1.compareTo(class2)
+        if (unit1 == unit2) {
+            if (isZero(value) && isZero(other.value)) return 0
+            return compareNumbers(value, other.value)
+        }
+        val base1 = BaseScale.of(unit1)
+        val base2 = BaseScale.of(unit2)
+        if (base1 == null || base2 == null) {
+            val baseUnit = unit1.baseUnit
+            val zero = Dec.ZERO
+            return (unit1.convertValue(decValue(value), baseUnit) - unit1.convertValue(zero, baseUnit))
+                .compareTo(unit2.convertValue(decValue(other.value), baseUnit) - unit2.convertValue(zero, baseUnit))
+        }
+        // v1 × n1 / d1  vs  v2 × n2 / d2: the ratios without the offsets
+        val left = decValue(value).multiply(base1.numerator).multiply(base2.denominator)
+        val right = decValue(other.value).multiply(base2.numerator).multiply(base1.denominator)
         return left.compareTo(right)
     }
 

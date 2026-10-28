@@ -65,7 +65,7 @@ class Measure private constructor(
         return "${plain(q.value)}±${plain(u.value)}${q.unit.symbol}${typeSuffix(q.value)}"
     }
 
-    operator fun unaryMinus(): Measure = Measure(negate(value), uncertainty)
+    operator fun unaryMinus(): Measure = of(negate(value), uncertainty)     // of: a widened value (-Int.MIN_VALUE) widens the uncertainty too
 
     /**
      * This measure in [target], a unit of the same dimension: the value converts as a
@@ -86,7 +86,12 @@ class Measure private constructor(
         @Suppress("UNCHECKED_CAST")
         val v = (q as Quantity<KiUnit>).convertTo(target)
         val s = difference(dec(u.value), from, target)
-        val sv: Number = when (v.value) { is Double -> s.toDouble(); is Float -> s.toFloat(); else -> s }
+        val sv: Number = when (v.value) {
+            is Double -> s.toDouble()
+            is Float -> s.toFloat()
+            is Int, is Long -> fit(s, typeOf(v.value)).let { t -> if (t == NumType.DEC) s else cast(s, t) }   // 50±10mm:i stays Int
+            else -> s
+        }
         return of(v, Quantity(sv, target))
     }
 
@@ -130,8 +135,11 @@ class Measure private constructor(
                     require(vu.dimension == uu.dimension) {
                         "A measure's value and uncertainty have one dimension, not ${vu.dimensionName} and ${uu.dimensionName}"
                     }
+                    // The numbers keep the inputs' type (5.0cm:d±1.0mm:d is a Double measure), widened to Dec
+                    // only when a converted Int or Long uncertainty is not whole (5±1mm:i in cm).
                     val un: Number = if (uu == vu) u.value else difference(dec(u.value), uu, vu)
-                    val t = common(v.value, un)
+                    var t = common(v.value, u.value)
+                    if (un is Dec && u.value !is Dec) t = maxOf(t, fit(un, t))
                     v = Quantity(cast(v.value, t), vu)
                     u = Quantity(cast(un, t), vu)
                 }
@@ -181,20 +189,25 @@ class Measure private constructor(
         private fun plainNumber(s: String): Number? {
             val c = s.replace("_", "")
             if (c.isEmpty() || !(c[0].isDigit() || (c.length > 1 && c[0] in "+-" && (c[1].isDigit() || c[1] == '.')) || c[0] == '.')) return null
+            // A suffix counts only after a number: 1dF is the quantity 1°F (dF is its ASCII symbol), not 1.0f.
+            fun body(n: Int): String? = c.dropLast(n).takeIf { NUMBER.matches(it) }
             return try {
                 when {
-                    c.endsWith("bd") || c.endsWith("BD") -> Dec(c.dropLast(2))
-                    c.endsWith("L") -> c.dropLast(1).toLong()
-                    c.endsWith("f") || c.endsWith("F") -> c.dropLast(1).toFloat()
-                    c.endsWith("d") || c.endsWith("D") -> c.dropLast(1).toDouble()
-                    c.all { it.isDigit() || it in "+-" } -> c.toLong().let { if (it in Int.MIN_VALUE..Int.MAX_VALUE) it.toInt() else it }
-                    c.all { it.isDigit() || it in "+-.eE" } -> c.toDouble()
+                    c.endsWith("bd") || c.endsWith("BD") -> body(2)?.let { Dec(it) }
+                    c.endsWith("L") -> body(1)?.toLong()
+                    c.endsWith("f") || c.endsWith("F") -> body(1)?.toFloat()
+                    c.endsWith("d") || c.endsWith("D") -> body(1)?.toDouble()
+                    WHOLE.matches(c) -> c.toLongOrNull()?.let { if (it in Int.MIN_VALUE..Int.MAX_VALUE) it.toInt() else it } ?: Dec(c)
+                    NUMBER.matches(c) -> c.toDouble()
                     else -> null
                 }
             } catch (e: NumberFormatException) {
                 null
             }
         }
+
+        private val WHOLE = Regex("[+-]?[0-9]+")
+        private val NUMBER = Regex("[+-]?([0-9]+\\.?[0-9]*|\\.[0-9]+)([eE][+-]?[0-9]+)?")
 
         /**
          * [a] op [b] for `+`, `-`, `*` or `/`, either side a [Measure] or an exact number
@@ -320,6 +333,15 @@ class Measure private constructor(
 
         private fun common(a: Number, b: Number): NumType = maxOf(typeOf(a), typeOf(b))
 
+        /** [t], or Dec when [d] is not a whole number in range for an Int or Long [t]. */
+        private fun fit(d: Dec, t: NumType): NumType = when (t) {
+            NumType.INT -> if (whole(d) && d.compareTo(Dec.valueOf(Int.MIN_VALUE.toLong())) >= 0 && d.compareTo(Dec.valueOf(Int.MAX_VALUE.toLong())) <= 0) t else NumType.DEC
+            NumType.LONG -> if (whole(d) && d.compareTo(Dec.valueOf(Long.MIN_VALUE)) >= 0 && d.compareTo(Dec.valueOf(Long.MAX_VALUE)) <= 0) t else NumType.DEC
+            else -> t
+        }
+
+        private fun whole(d: Dec): Boolean = d.signum() == 0 || d.stripTrailingZeros().scale() <= 0
+
         /** Arithmetic results: Dec when a Dec takes part, Float when every number is a Float, else Double. */
         private fun resultType(xs: List<Any>): NumType {
             val types = xs.map { typeOf(amount(it)) }
@@ -394,8 +416,7 @@ class Measure private constructor(
                 val au: KiUnit = a.unit
                 val bu: KiUnit = b.unit
                 require(au.dimension == bu.dimension) { "Cannot compare a measure of ${au.dimensionName} with one of ${bu.dimensionName}" }
-                val bd = if (au == bu) dec(b.value) else difference(dec(b.value), bu, au)
-                dec(a.value).compareTo(bd)
+                a.compareDifference(b)        // exact, as the value's comparison and RevDB's keys are
             }
             else -> compareAmounts(a, b)
         }
@@ -403,12 +424,12 @@ class Measure private constructor(
         private fun kind(x: Any): String = if (x is Quantity<*>) (x.unit as KiUnit).dimensionName else "a number"
 
         private fun negate(x: Any): Any = when (x) {
-            is Quantity<*> -> -x
+            is Quantity<*> -> if (x.value == Int.MIN_VALUE || x.value == Long.MIN_VALUE) Quantity<KiUnit>(negate(x.value) as Number, x.unit as KiUnit) else -x
             is Dec -> x.negate()
             is Double -> -x
             is Float -> -x
-            is Long -> -x
-            is Int -> -x
+            is Long -> if (x == Long.MIN_VALUE) Dec.valueOf(x).negate() else -x      // -Long.MIN_VALUE does not fit: widen, never wrap
+            is Int -> if (x == Int.MIN_VALUE) -(x.toLong()) else -x
             is Number -> -x.toDouble()
             else -> throw IllegalArgumentException("Not a number or quantity: $x")
         }

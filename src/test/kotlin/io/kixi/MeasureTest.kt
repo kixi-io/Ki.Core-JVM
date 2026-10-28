@@ -12,6 +12,7 @@ import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.kotest.matchers.types.shouldBeInstanceOf
 import java.math.BigDecimal as Dec
+import kotlin.math.sign
 import io.kixi.uom.Unit as KiUnit
 
 class MeasureTest : StringSpec({
@@ -192,6 +193,56 @@ class MeasureTest : StringSpec({
         m("10±0.5").relative shouldBe 0.05
         m("0±1").relative.shouldBeNull()
         m("10±0.5mM").relative shouldBe 0.05
+    }
+
+    // ========== The review of 2026-10-28 ==========
+
+    "uncertainties in different units compare exactly, both ways, as a key orders them" {
+        val a = m("20°C±1°F")                        // 20±0.555…6°C: the conversion to °C rounds
+        val b = m("68±1°F")
+        a.compareTo(b) shouldBe -b.compareTo(a)
+        (a.compareTo(b) == 0) shouldBe (b.compareTo(a) == 0)
+        m("20±0.5°C").compareTo(m("68±0.9°F")) shouldBe 0
+        m("68±0.9°F").compareTo(m("20±0.5°C")) shouldBe 0
+        m("760±1mmHg").compareTo(m("1atm±1mmHg")).let { it shouldBe -m("1atm±1mmHg").compareTo(m("760±1mmHg")) }
+        // A sweep of natural pairs: antisymmetric, and 0 exactly both ways.
+        for (c in 0..30) for (u in listOf("0.1", "0.5", "1", "2")) {
+            val x = m("$c°C±${u}°F")
+            val y = m("${Dec(c).multiply(Dec("1.8")).add(Dec(32)).toPlainString()}±${u}°F")
+            x.compareTo(y).sign shouldBe -y.compareTo(x).sign
+        }
+    }
+
+    "dF is a unit, not a Float suffix; a long whole number reads" {
+        m("20±1dF") shouldBe m("20±1°F")
+        (m("20±1dF").value as Quantity<*>).unit.symbol shouldBe "°F"
+        m("5±1f") shouldBe Measure.of(5f, 1f)                              // a suffix after a number still counts
+        val big = Measure.of(Quantity(Dec("1E+20"), KiUnit.cm), Quantity(Dec.ONE, KiUnit.cm))
+        Measure.parse(big.toString()) shouldBe big
+        Measure.parse("100000000000000000000±1").value shouldBe Dec("100000000000000000000")
+    }
+
+    "negation widens rather than wraps" {
+        (-Measure.of(Int.MIN_VALUE, 1)).value shouldBe 2147483648L
+        (Measure.of(0, 0) - Measure.of(Int.MIN_VALUE, 0)).value.let { (it as Number).toDouble() shouldBe 2.147483648E9 }
+        (-Measure.of(Long.MIN_VALUE, 1L)).value shouldBe Dec(Long.MIN_VALUE).negate()
+        (-m("-2147483648±1cm:i")).value shouldBe Quantity(2147483648L, KiUnit.cm)
+    }
+
+    "number types follow the inputs: Int stays Int when the conversion is whole, Double stays Double" {
+        val i = m("5±1cm:i").to(KiUnit.mm)
+        i.value shouldBe Quantity(50, KiUnit.mm)
+        i.uncertainty shouldBe Quantity(10, KiUnit.mm)
+        m("5±1cm:i").to(KiUnit.m).value.let { (it as Quantity<*>).value.shouldBeInstanceOf<Dec>() }
+        Measure.of(Quantity(5.0, KiUnit.cm), Quantity(1.0, KiUnit.mm)).uncertainty.let { (it as Quantity<*>).value.shouldBeInstanceOf<Double>() }
+        Measure.of(Quantity(5, KiUnit.cm), Quantity(1, KiUnit.mm)).uncertainty shouldBe Quantity(Dec("0.1"), KiUnit.cm)
+        Measure.of(Quantity(5, KiUnit.cm), Quantity(10, KiUnit.mm)).uncertainty shouldBe Quantity(1, KiUnit.cm)
+    }
+
+    "equal measures hash alike, Dec quantities included" {
+        m("1.5±0.1cm") shouldBe m("1.50±0.1cm")
+        m("1.5±0.1cm").hashCode() shouldBe m("1.50±0.1cm").hashCode()
+        Quantity(Dec("1.5"), KiUnit.cm).hashCode() shouldBe Quantity(Dec("1.50"), KiUnit.cm).hashCode()
     }
 
     // ========== Ki ==========

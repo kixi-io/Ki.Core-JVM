@@ -192,6 +192,9 @@ class Vector<T : Number> private constructor(
         @JvmStatic
         fun of(type: Type, numbers: List<Number>): Vector<Number> {
             require(type in ELEMENT_TYPES) { "A vector holds Int, Long, Float, Double or Dec numbers, not $type" }
+            // A Float or Double already of the vector's type is kept as it is, so -0.0 stays -0.0.
+            if (type == Type.Double && numbers.all { it is Double }) return checkFinite(ofDoubles(*DoubleArray(numbers.size) { numbers[it] as Double })) as Vector<Number>
+            if (type == Type.Float && numbers.all { it is Float }) return checkFinite(ofFloats(*FloatArray(numbers.size) { numbers[it] as Float })) as Vector<Number>
             return try {
                 build(type, numbers.size) { dec(numbers[it]) }
             } catch (e: ArithmeticException) {
@@ -209,9 +212,11 @@ class Vector<T : Number> private constructor(
         fun isLiteral(text: String): Boolean = text.trimStart().startsWith(".vec<")
 
         /**
-         * Reads `.vec<T> { n n n }`: the numbers separated by whitespace (newlines and
-         * `#` / `//` comments to the end of a line are allowed), each unsuffixed or with
-         * its type's own suffix (`L`, `f`, `d`, `bd`), `_` digit separators allowed.
+         * Reads `.vec<T> { n n n }`: the numbers separated by whitespace or commas
+         * (newlines, `#` and `//` comments to the end of a line and `/* */` comments are
+         * allowed, as in KD), each unsuffixed or with its type's own suffix (`L`, `f`, `d`,
+         * `bd`), `_` digit separators allowed. KD's reader also takes hex and binary
+         * literals; this reads the decimal form [toString] writes.
          */
         @JvmStatic
         fun parse(text: String): Vector<*> {
@@ -224,9 +229,9 @@ class Vector<T : Number> private constructor(
                 ?: throw ParseException("A vector's type is Int, Long, Float, Double or Dec, not '$typeName'")
             val rest = t.substring(close + 1).trim()
             if (!rest.startsWith("{") || !rest.endsWith("}")) throw ParseException("A vector's numbers are in braces: $text")
-            val body = rest.substring(1, rest.length - 1)
+            val body = stripBlockComments(rest.substring(1, rest.length - 1))
                 .lines().joinToString("\n") { line -> stripComment(line) }
-            val words = body.split(Regex("\\s+")).filter { it.isNotEmpty() }
+            val words = body.split(Regex("[\\s,]+")).filter { it.isNotEmpty() }
             val numbers = words.map { w -> element(w, type) ?: throw ParseException("'$w' is not a ${type.name} in $text") }
             return try {
                 of(type, numbers)
@@ -238,6 +243,24 @@ class Vector<T : Number> private constructor(
         override fun parseLiteral(text: String): Vector<*> = parse(text)
 
         // ------------------------------------------------------------------ internals
+
+        /** [text] without its `/* */` comments, which nest as KD's do. */
+        private fun stripBlockComments(text: String): String {
+            if (!text.contains("/*")) return text
+            val out = StringBuilder()
+            var depth = 0
+            var k = 0
+            while (k < text.length) {
+                when {
+                    text.startsWith("/*", k) -> { depth++; k += 2 }
+                    depth > 0 && text.startsWith("*/", k) -> { depth--; k += 2; if (depth == 0) out.append(' ') }
+                    depth > 0 -> k++
+                    else -> out.append(text[k++])
+                }
+            }
+            if (depth > 0) throw ParseException("Unterminated /* comment in a vector")
+            return out.toString()
+        }
 
         private fun stripComment(line: String): String {
             val i = listOf(line.indexOf('#'), line.indexOf("//")).filter { it >= 0 }.minOrNull() ?: return line

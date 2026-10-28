@@ -124,6 +124,15 @@ class VectorTest : StringSpec({
         x[0] shouldBe 1
     }
 
+    // ========== The review of 2026-10-28 ==========
+
+    "-0.0 stays -0.0; commas and comments read as KD reads them" {
+        Vector.parse(".vec<Double> { -0.0 }") shouldBe Vector.ofDoubles(-0.0)
+        Vector.of(Type.Double, listOf(-0.0)) shouldBe Vector.ofDoubles(-0.0)
+        Ki.parse(".vec<Int> { 1, 2 /* a /* nested */ note */ 3 }") shouldBe Vector.ofInts(1, 2, 3)
+        Vector.parse(Vector.ofDecs(Dec("1E+19")).toString()) shouldBe Vector.ofDecs(Dec("1E+19"))
+    }
+
     // ========== Ki ==========
 
     "Ki reads, writes and types a vector" {
