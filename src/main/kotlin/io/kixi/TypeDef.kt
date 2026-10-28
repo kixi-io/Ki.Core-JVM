@@ -86,6 +86,12 @@ open class TypeDef(val type: Type, val nullable: Boolean) {
         val Ref = TypeDef(Type.Ref, false)
         val Ref_N = TypeDef(Type.Ref, true)
 
+        val Measure = TypeDef(Type.Measure, false)
+        val Measure_N = TypeDef(Type.Measure, true)
+
+        val Vector = TypeDef(Type.Vector, false)
+        val Vector_N = TypeDef(Type.Vector, true)
+
         // nil
         val nil = TypeDef(Type.nil, true)
 
@@ -119,6 +125,8 @@ open class TypeDef(val type: Type, val nullable: Boolean) {
             "Grid" -> Grid; "Grid_N" -> Grid_N
             "Id" -> Id; "Id_N" -> Id_N
             "Ref" -> Ref; "Ref_N" -> Ref_N
+            "Measure" -> Measure; "Measure_N" -> Measure_N
+            "Vector" -> Vector; "Vector_N" -> Vector_N
             "Any" -> Any; "Any_N" -> Any_N
 
             else -> null

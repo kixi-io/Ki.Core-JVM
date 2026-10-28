@@ -141,6 +141,8 @@ class Ki {
                 is Version -> obj.toString()
                 is Range<*> -> obj.toString()
                 is Quantity<*> -> obj.toString()
+                is Measure -> obj.toString()
+                is io.kixi.Vector<*> -> obj.toString()
                 else -> TypeBags.format(obj) ?: obj.toString()   // a type bag's value; an ExtLiteral prints as written
             }
         }
@@ -295,6 +297,18 @@ class Ki {
             // Ref
             if (trimmed.startsWith(".ref(")) {
                 return Ref.parseLiteral(trimmed)
+            }
+
+            // Vector
+            if (trimmed.startsWith(".vec<")) {
+                return io.kixi.Vector.parse(trimmed)
+            }
+
+            // Measure: a number or quantity, ± (or +-), its uncertainty
+            if (firstChar != '.' && !trimmed.contains('@') &&
+                (trimmed.indexOf(Measure.PLUS_MINUS) > 0 || trimmed.indexOf("+-", 1) > 0)
+            ) {
+                return Measure.parse(trimmed)
             }
 
             // Grid - Note: Full grid parsing requires KD parser

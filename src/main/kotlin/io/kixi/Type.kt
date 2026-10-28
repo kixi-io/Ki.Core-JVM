@@ -27,6 +27,10 @@ enum class Type(val kclass: KClass<*>, val supertype: Type?) {
     Coordinate(io.kixi.Coordinate::class, Any),
     Grid(io.kixi.Grid::class, Any),
     Quantity(io.kixi.uom.Quantity::class, Any),
+    /** A value with its standard uncertainty (`0.0042±0.0006µM`); not a [Number]. */
+    Measure(io.kixi.Measure::class, Any),
+    /** A packed row of numbers of one type (`.vec<Float> { 1.0 2.5 }`); not a [List]. */
+    Vector(io.kixi.Vector::class, Any),
     Range(io.kixi.Range::class, Any),
     Id(io.kixi.Id::class, Any),
     Ref(io.kixi.Ref::class, Any),
@@ -74,6 +78,8 @@ enum class Type(val kclass: KClass<*>, val supertype: Type?) {
             is io.kixi.Coordinate -> Coordinate
             is io.kixi.Grid<*> -> Grid
             is io.kixi.uom.Quantity<*> -> Quantity
+            is io.kixi.Measure -> Measure
+            is io.kixi.Vector<*> -> Vector
             is io.kixi.Range<*> -> Range
             is io.kixi.Id -> Id
             is io.kixi.Ref -> Ref
