@@ -9,7 +9,7 @@ plugins {
 }
 
 group = "io.kixi"
-version = "2.4.0"
+version = "2.5.0"
 description = "ki-core"
 
 repositories {
@@ -114,7 +114,9 @@ publishing {
 
             pom {
                 groupId = "${project.group}"
-                artifactId = "ki-core"
+                // The coordinates every consumer and composite build asks for. Published
+                // named io.kixi:ki-core up to 2.4.0.
+                artifactId = "Ki.Core-JVM"
                 name.set("Ki.Core")
                 description.set("A JVM implementation of the Ki.Core library - foundation for the Ki ecosystem")
                 url.set("https://kixi.io")
@@ -122,7 +124,7 @@ publishing {
                 licenses {
                     license {
                         name.set("MIT License")
-                        url.set("https://raw.githubusercontent.com/kixi-io/Ki.Core-JVM/master/LICENSE")
+                        url.set("https://raw.githubusercontent.com/kixi-io/Ki.Core-JVM/master/LICENSE.txt")
                         distribution.set("repo")
                     }
                 }
