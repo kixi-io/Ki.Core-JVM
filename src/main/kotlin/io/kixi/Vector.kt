@@ -49,23 +49,35 @@ class Vector<T : Number> private constructor(
     /** The decimal view of element [index] (a Double as it prints: 0.1, not its binary expansion). */
     fun decAt(index: Int): Dec = dec(get(index))
 
-    /** The sum: an Int vector's is a Long (as KQ sums Ints, design 7.5), else the element type; null when empty. */
+    /**
+     * The sum, as KQ's `sum` gives it (RevDB design 7.5): an Int vector's is a Long; Long,
+     * Float and Double follow Kotlin's `sum()` (so `0.1 + 0.2` is `0.30000000000000004` and a
+     * Long total wraps, as Kotlin's does); Dec is exact. Null when empty.
+     */
     fun sum(): Number? {
         if (isEmpty()) return null
         return when {
-            ints != null -> ints.fold(0L) { a, x -> Math.addExact(a, x.toLong()) }
-            longs != null -> longs.fold(0L) { a, x -> Math.addExact(a, x) }
-            floats != null -> decSum().toFloat()
-            doubles != null -> decSum().toDouble()
+            ints != null -> ints.sumOf { it.toLong() }
+            longs != null -> longs.sum()
+            floats != null -> floats.sum()
+            doubles != null -> doubles.sum()
             else -> decSum()
         }
     }
 
-    /** The mean: Dec for a Dec vector, else a Double; null when empty. */
+    /**
+     * The mean, as KQ's `mean` gives it: a Dec vector's is exact to 34 digits, every other
+     * vector's is a Double, Kotlin's `average()`. Null when empty.
+     */
     fun mean(): Number? {
         if (isEmpty()) return null
-        val m = decSum().divide(Dec.valueOf(size.toLong()), MathContext.DECIMAL128)
-        return if (decs != null) m else m.toDouble()
+        if (decs != null) return decSum().divide(Dec.valueOf(size.toLong()), MathContext.DECIMAL128)
+        return when {
+            ints != null -> ints.average()
+            longs != null -> longs.average()
+            floats != null -> floats.average()
+            else -> doubles!!.average()
+        }
     }
 
     /** The smallest number, or null when empty. */
@@ -112,7 +124,13 @@ class Vector<T : Number> private constructor(
         return build(t, size) { decAt(it).divide(dec(k), MathContext.DECIMAL128) }
     }
 
-    operator fun unaryMinus(): Vector<Number> = build(elementType, size) { decAt(it).negate() }
+    /** Each element negated: Float and Double as Kotlin negates them (`-0.0` from `0.0`), Int and Long refusing to wrap. */
+    @Suppress("UNCHECKED_CAST")
+    operator fun unaryMinus(): Vector<Number> = when {
+        floats != null -> Vector<Float>(elementType, null, null, FloatArray(size) { -floats[it] }, null, null) as Vector<Number>
+        doubles != null -> Vector<Double>(elementType, null, null, null, DoubleArray(size) { -doubles[it] }, null) as Vector<Number>
+        else -> build(elementType, size) { decAt(it).negate() }
+    }
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -192,9 +210,16 @@ class Vector<T : Number> private constructor(
         @JvmStatic
         fun of(type: Type, numbers: List<Number>): Vector<Number> {
             require(type in ELEMENT_TYPES) { "A vector holds Int, Long, Float, Double or Dec numbers, not $type" }
-            // A Float or Double already of the vector's type is kept as it is, so -0.0 stays -0.0.
-            if (type == Type.Double && numbers.all { it is Double }) return checkFinite(ofDoubles(*DoubleArray(numbers.size) { numbers[it] as Double })) as Vector<Number>
-            if (type == Type.Float && numbers.all { it is Float }) return checkFinite(ofFloats(*FloatArray(numbers.size) { numbers[it] as Float })) as Vector<Number>
+            // A Float or Double already of the vector's type is kept as it is; another number goes through its
+            // decimal view, and a negative zero (which a Dec cannot hold) stays -0.0.
+            if (type == Type.Double) return checkFinite(ofDoubles(*DoubleArray(numbers.size) { i ->
+                val n = numbers[i]
+                if (n is Double) n else if (negativeZero(n)) -0.0 else dec(n).toDouble()
+            })) as Vector<Number>
+            if (type == Type.Float) return checkFinite(ofFloats(*FloatArray(numbers.size) { i ->
+                val n = numbers[i]
+                if (n is Float) n else if (negativeZero(n)) -0.0f else dec(n).toFloat()
+            })) as Vector<Number>
             return try {
                 build(type, numbers.size) { dec(numbers[it]) }
             } catch (e: ArithmeticException) {
@@ -229,8 +254,7 @@ class Vector<T : Number> private constructor(
                 ?: throw ParseException("A vector's type is Int, Long, Float, Double or Dec, not '$typeName'")
             val rest = t.substring(close + 1).trim()
             if (!rest.startsWith("{") || !rest.endsWith("}")) throw ParseException("A vector's numbers are in braces: $text")
-            val body = stripBlockComments(rest.substring(1, rest.length - 1))
-                .lines().joinToString("\n") { line -> stripComment(line) }
+            val body = stripComments(rest.substring(1, rest.length - 1))
             val words = body.split(Regex("[\\s,]+")).filter { it.isNotEmpty() }
             val numbers = words.map { w -> element(w, type) ?: throw ParseException("'$w' is not a ${type.name} in $text") }
             return try {
@@ -244,14 +268,21 @@ class Vector<T : Number> private constructor(
 
         // ------------------------------------------------------------------ internals
 
-        /** [text] without its `/* */` comments, which nest as KD's do. */
-        private fun stripBlockComments(text: String): String {
-            if (!text.contains("/*")) return text
+        /**
+         * [text] without its comments, read left to right as KD reads them: `#` and `//` to the
+         * end of the line, block comments nesting. A comment's opener inside another comment is
+         * text: a block comment's opener after `#` is part of that line comment.
+         */
+        private fun stripComments(text: String): String {
+            if (!text.contains('#') && !text.contains('/')) return text
             val out = StringBuilder()
             var depth = 0
             var k = 0
             while (k < text.length) {
                 when {
+                    depth == 0 && (text[k] == '#' || text.startsWith("//", k)) -> {
+                        while (k < text.length && text[k] != '\n') k++
+                    }
                     text.startsWith("/*", k) -> { depth++; k += 2 }
                     depth > 0 && text.startsWith("*/", k) -> { depth--; k += 2; if (depth == 0) out.append(' ') }
                     depth > 0 -> k++
@@ -262,10 +293,8 @@ class Vector<T : Number> private constructor(
             return out.toString()
         }
 
-        private fun stripComment(line: String): String {
-            val i = listOf(line.indexOf('#'), line.indexOf("//")).filter { it >= 0 }.minOrNull() ?: return line
-            return line.substring(0, i)
-        }
+        private fun negativeZero(n: Number): Boolean =
+            (n is Double && n == 0.0 && 1.0 / n < 0) || (n is Float && n == 0f && 1f / n < 0)
 
         /** One element, read as [type]: unsuffixed, or with that type's suffix. */
         private fun element(word: String, type: Type): Number? {

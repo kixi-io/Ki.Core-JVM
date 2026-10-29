@@ -231,9 +231,14 @@ class Measure private constructor(
                     terms = listOf(multiply(abs(y.value), x.uncertainty), multiply(abs(x.value), y.uncertainty))
                 }
                 '/' -> {
-                    q = divide(x.value, y.value)
+                    // UnitAlgebra divides readings on the absolute scale (°C as kelvin). An uncertainty is a
+                    // difference, so a measure in an offset unit goes to its base unit first (to() converts the
+                    // value as a reading and the uncertainty as a difference); then σ/|y| is a ratio of kelvins.
+                    val xx = if (y.value is Quantity<*>) absolute(x) else x
+                    val yy = absolute(y)
+                    q = divide(xx.value, yy.value)
                     // σ² = (σx / y)² + (q · σy / y)²
-                    terms = listOf(divide(x.uncertainty, abs(y.value)), multiply(abs(q), divide(y.uncertainty, abs(y.value))))
+                    terms = listOf(divide(xx.uncertainty, abs(yy.value)), multiply(abs(q), divide(yy.uncertainty, abs(yy.value))))
                 }
                 else -> throw IllegalArgumentException("A measure takes +, -, * or /, not $op")
             }
@@ -395,6 +400,14 @@ class Measure private constructor(
         private fun difference(d: Dec, from: KiUnit, to: KiUnit): Dec =
             from.convertValue(d, to).subtract(from.convertValue(Dec.ZERO, to))
 
+        /** [m] in its unit's base unit when that unit has an offset (°C, °F), else [m] as it is. */
+        private fun absolute(m: Measure): Measure {
+            val q = m.value as? Quantity<*> ?: return m
+            val unit: KiUnit = q.unit
+            val base = unit.baseUnit
+            return if (unit != base && unit.convertValue(Dec.ZERO, base).signum() != 0) m.to(base) else m
+        }
+
         private fun compareAmounts(a: Any, b: Any): Int = when {
             a is Number && b is Number -> {
                 if (!finite(a) || !finite(b)) a.toDouble().compareTo(b.toDouble()) else dec(a).compareTo(dec(b))
@@ -447,7 +460,17 @@ class Measure private constructor(
             else -> throw IllegalArgumentException("Cannot add ${kind(a)} and ${kind(b)}")
         }
 
-        private fun subtract(a: Any, b: Any): Any = add(a, negate(b))
+        /**
+         * a - b. Quantities subtract with [Quantity.minus], which converts before subtracting:
+         * adding a negated reading would apply a temperature's offset twice
+         * (50°F + -(20°C) is 46°F, while 50°F - 20°C is -18°F).
+         */
+        @Suppress("UNCHECKED_CAST")
+        private fun subtract(a: Any, b: Any): Any = when {
+            a is Number && b is Number -> dec(a).subtract(dec(b))
+            a is Quantity<*> && b is Quantity<*> -> (a as Quantity<KiUnit>) - (b as Quantity<KiUnit>)
+            else -> throw IllegalArgumentException("Cannot subtract ${kind(b)} from ${kind(a)}")
+        }
 
         private fun multiply(a: Any, b: Any): Any = when {
             a is Number && b is Number -> dec(a).multiply(dec(b))
@@ -489,13 +512,20 @@ class Measure private constructor(
             return sum.sqrt(MC)
         }
 
-        private fun build(q: Any, sigma: Dec, t: NumType): Measure = when (q) {
-            is Quantity<*> -> {
-                require(q.unit !is Currency) { "A measure is not money: $q" }
-                Measure(Quantity(cast(q.value, t), q.unit), Quantity(cast(sigma, t), q.unit))
+        /** @throws ArithmeticException when the value or uncertainty overflows a Double or Float result */
+        private fun build(q: Any, sigma: Dec, t: NumType): Measure {
+            val m = when (q) {
+                is Quantity<*> -> {
+                    require(q.unit !is Currency) { "A measure is not money: $q" }
+                    Measure(Quantity(cast(q.value, t), q.unit), Quantity(cast(sigma, t), q.unit))
+                }
+                is Number -> Measure(cast(q, t), cast(sigma, t))
+                else -> throw IllegalArgumentException("Not a number or quantity: $q")
             }
-            is Number -> Measure(cast(q, t), cast(sigma, t))
-            else -> throw IllegalArgumentException("Not a number or quantity: $q")
+            if (!finite(amount(m.value)) || !finite(amount(m.uncertainty))) {
+                throw ArithmeticException("Measure overflow: the result does not fit in a ${t.name.lowercase().replaceFirstChar { it.uppercase() }}")
+            }
+            return m
         }
 
         /**

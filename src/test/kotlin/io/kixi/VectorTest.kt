@@ -91,7 +91,9 @@ class VectorTest : StringSpec({
         x.max() shouldBe 5
         Vector.ofDecs(Dec("0.1"), Dec("0.2")).sum() shouldBe Dec("0.3")
         Vector.ofDecs(Dec("1"), Dec("2")).mean() shouldBe Dec("1.5")
-        Vector.ofDoubles(0.1, 0.2).sum() shouldBe 0.3                 // decimal sums: 0.3, not 0.30000000000000004
+        Vector.ofDoubles(0.1, 0.2).sum() shouldBe 0.30000000000000004  // as Kotlin's sum() and KQ's sum (RevDB design 4.5)
+        Vector.ofDoubles(0.1, 0.2).mean() shouldBe doubleArrayOf(0.1, 0.2).average()
+        Vector.ofLongs(Long.MAX_VALUE, 1L).sum() shouldBe Long.MIN_VALUE        // wraps, as Kotlin's and KQ's sums do
         Vector.ofFloats(0.5f, 0.25f).sum().shouldBeInstanceOf<Float>()
         Vector.ofInts().sum().shouldBeNull()
         Vector.ofInts().mean().shouldBeNull()
