@@ -11,21 +11,45 @@ package io.kixi
  * @return String
  */
 
-fun log(vararg args:Any?) = out("", *args /*, stream = System.out*/)
+/** Which of [log], [warn] and [err] produced a line, for [logHandler]. */
+enum class LogLevel { LOG, WARN, ERROR }
 
-fun err(vararg args:Any?) = out("ERROR> ", *args /*, stream = System.err*/)
+/**
+ * Where [log], [warn] and [err] send their lines, so a host application can put
+ * them in front of the user in its own way: RevNexus routes a warning to its
+ * orange Messages pane, which is how an unverified mass reaches a researcher who
+ * is not watching a console.
+ *
+ * Null, the default, prints to stdout as Ki always has. The handler receives the
+ * message without the `WARN> ` style prefix, which the return value still carries.
+ * Set it once while the application starts; a handler that throws is ignored and
+ * the line is printed instead.
+ */
+@Volatile
+var logHandler: ((LogLevel, String) -> Unit)? = null
 
-fun warn(vararg args:Any?) = out("WARN> ", *args /*, stream = System.err*/)
+fun log(vararg args:Any?) = out("", LogLevel.LOG, *args)
 
-private fun out(prefix:String = "", vararg args:Any? /*, stream: PrintStream*/) : String {
-    var printMe = prefix
+fun err(vararg args:Any?) = out("ERROR> ", LogLevel.ERROR, *args)
 
-    if (args.isEmpty()) {
-        // print blank line
-    } else if(args.size == 1) {
-        printMe += args[0].toString()
-    } else {
-        printMe += args.toString(", ")
+fun warn(vararg args:Any?) = out("WARN> ", LogLevel.WARN, *args)
+
+private fun out(prefix:String = "", level: LogLevel = LogLevel.LOG, vararg args:Any?) : String {
+    val message = when {
+        args.isEmpty() -> ""
+        args.size == 1 -> args[0].toString()
+        else -> args.toString(", ")
+    }
+    val printMe = prefix + message
+
+    val handler = logHandler
+    if (handler != null) {
+        try {
+            handler(level, message)
+            return printMe
+        } catch (e: Throwable) {
+            // A broken handler must not swallow the line.
+        }
     }
 
     // Hack until we can get System.err working properly
@@ -33,5 +57,3 @@ private fun out(prefix:String = "", vararg args:Any? /*, stream: PrintStream*/) 
 
     return printMe
 }
-
-
