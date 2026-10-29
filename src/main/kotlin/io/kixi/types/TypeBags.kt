@@ -70,6 +70,9 @@ object TypeBags {
     /** Discovered bags not active yet, by every name that activates one. */
     private val catalog = AtomicReference(Catalog(emptyMap()))
 
+    /** Discovered bags activated at discovery because their manifests say preload=true. */
+    private val preloaded: MutableSet<String> = ConcurrentHashMap.newKeySet()
+
     /** Discovered bags whose activation failed (reported in [problems]); they are not tried again. */
     private val failed: MutableSet<String> = ConcurrentHashMap.newKeySet()
 
@@ -173,6 +176,33 @@ object TypeBags {
      */
     @JvmStatic
     fun hasInactiveMember(name: String): Boolean = name in catalog.get().memberNames
+
+    /**
+     * Every bag, active or not, with how it was loaded and what it offers, for a host
+     * to show (RevNexus's RevDB Overview): the active bags in registration order, then
+     * those not loaded yet by name. Creates nothing; [problems] lists the bags that
+     * could not be loaded.
+     */
+    @JvmStatic
+    fun describe(): List<TypeBagInfo> {
+        val s = current()
+        val out = ArrayList<TypeBagInfo>()
+        for (e in s.entries) {
+            val b = e.bag
+            val status = when {
+                e.explicit -> TypeBagInfo.Status.REGISTERED
+                e.name in preloaded -> TypeBagInfo.Status.PRELOADED
+                else -> TypeBagInfo.Status.LOADED_ON_REFERENCE
+            }
+            out.add(TypeBagInfo(e.name, status, e.requires, b.types.map { it.name }, b.types.flatMap { it.literals },
+                b.functions.map { it.name }, b.constants.keys.toList()))
+        }
+        for (m in catalog.get().pending.values.sortedBy { it.name }) {
+            out.add(TypeBagInfo(m.name, TypeBagInfo.Status.AVAILABLE, m.requires, m.types.keys.sorted(), m.literals.keys.sorted(),
+                m.functions.sorted(), m.constants.sorted()))
+        }
+        return out
+    }
 
     /** The names of every bag's functions and constants, active or not. Creates nothing. */
     @JvmStatic
@@ -447,7 +477,7 @@ object TypeBags {
             }
         }
         for (m in found) addToCatalog(m)
-        for (m in found) if (m.preload) activate(m)
+        for (m in found) if (m.preload && activate(m) != null) preloaded.add(m.name)
     }
 
     /** The bag classes the service files of [loader] list (`#` comments and blank lines skipped), without loading any. */

@@ -217,6 +217,22 @@ class TypeBagsTest : FunSpec({
             TypeBags.activate("nowhere").shouldBeNull()
         }
 
+        test("describe: every bag, how it was loaded, its names; creates nothing") {
+            withSampleBags {
+                val before = Created.counts.toMap()
+                val info = TypeBags.describe().associateBy { it.name }
+                info["preloaded"]!!.status shouldBe TypeBagInfo.Status.PRELOADED
+                info["lazybase"]!!.status shouldBe TypeBagInfo.Status.LOADED_ON_REFERENCE
+                info["lazybase"]!!.literals shouldBe listOf("pebble")
+                info["lazybase"]!!.functions shouldBe listOf("pebbles")
+                info["lazytop"]!!.requires shouldBe listOf("lazybase")
+                info["tb"]!!.status shouldBe TypeBagInfo.Status.REGISTERED
+                info["tb"]!!.status.loaded.shouldBeTrue()
+                (info["clash"] == null).shouldBeTrue()
+                Created.counts.toMap() shouldBe before
+            }
+        }
+
         test("manifests: what discovery reads, checked against the bag") {
             val top = TypeBags.byName("lazytop")!!
             TypeBags.checkManifest(top).shouldBeEmpty()
