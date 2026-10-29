@@ -11,7 +11,9 @@ import kotlin.reflect.KClass
  * its manifest, `META-INF/ki/bags/<bag class>.properties` ([TypeBags.manifestOf]
  * writes it). Discovery reads only the manifest; the bag is created the first time
  * something refers to it (its literal, a type or function name, one of its values),
- * unless the manifest says `preload=true`. A discovered bag needs a public
+ * unless the manifest says `preload=true`. Preloading is generally a bad idea: it
+ * costs every host memory for a bag it may never use, so keep it for a small bag that
+ * is used frequently (Ki.Math, Ki.Sci, Ki.Bio). A discovered bag needs a public
  * no-argument constructor; a Kotlin `object` is registered with [TypeBags.register],
  * or listed through a small class that delegates to it.
  *

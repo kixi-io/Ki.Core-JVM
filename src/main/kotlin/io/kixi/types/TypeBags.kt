@@ -587,8 +587,11 @@ object TypeBags {
     /**
      * The manifest of [bag], as `META-INF/ki/bags/<bag class>.properties` holds it:
      * what discovery reads instead of creating the bag. [preload] is the manifest's
-     * own choice (Ki's foundational bags say true); everything else comes from the bag,
-     * and activation refuses a bag whose manifest no longer matches it.
+     * own choice; everything else comes from the bag, and activation refuses a bag
+     * whose manifest no longer matches it. Any bag may preload, but it is generally a
+     * bad idea: a preloaded bag costs every host its memory whether or not it is used.
+     * Keep it for a small bag that is used frequently (Ki.Math, Ki.Sci, Ki.Bio); every
+     * other bag should load when first referred to.
      */
     @JvmStatic
     @JvmOverloads
