@@ -8,8 +8,10 @@ import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.booleans.shouldBeFalse
 import io.kotest.matchers.booleans.shouldBeTrue
 import io.kotest.matchers.collections.shouldContain
+import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.collections.shouldContainExactly
 import io.kotest.matchers.nulls.shouldBeNull
+import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldContain
 import io.kotest.matchers.string.shouldStartWith
@@ -150,22 +152,83 @@ class TypeBagsTest : FunSpec({
             }
         }
 
-        test("discovered bags are registered in requires order; broken ones are skipped and reported") {
+        test("discovered bags are read from their manifests; broken ones are skipped and reported") {
+            TypeBags.literal("tally")!!.parse(".tally(7)").let { (it as Tally).n } shouldBe 7      // refers to disc
             TypeBags.byName("disc").shouldNotBeNull()
-            TypeBags.literal("tally")!!.parse(".tally(7)").let { (it as Tally).n } shouldBe 7
             TypeBags.byName("clash").shouldBeNull()
             TypeBags.byName("needy").shouldBeNull()
+            TypeBags.byName("throwing").shouldBeNull()
+            TypeBags.literal("buoy").shouldBeNull()
             val problems = TypeBags.problems.joinToString("\n")
-            problems shouldContain "DoesNotExist"
+            problems shouldContain "Type bag class io.kixi.types.DoesNotExist has no manifest (META-INF/ki/bags/io.kixi.types.DoesNotExist.properties)"
             problems shouldContain "Type bag 'clash' (io.kixi.types.ClashingBag) was skipped: Literal name 'tally' is taken (disc.Tally and clash.Clash)"
             problems shouldContain "Type bag 'needy' (io.kixi.types.NeedyBag) was skipped: it requires 'nowhere', which is not available"
-            problems shouldContain "Type bag '?' (io.kixi.types.ThrowingBag) was skipped: java.lang.IllegalStateException: no name today"
+            problems shouldContain "Type bag 'throwing' (io.kixi.types.ThrowingBag) was skipped: java.lang.IllegalStateException: no name today"
+            problems shouldContain "Type bag 'stale' (io.kixi.types.StaleBag) was skipped: its manifest does not match the bag (literals is {buoy=Buoy, float=Buoy}, the bag has {buoy=Buoy})"
             // Discovered bags stay; unregister is for bags added with register.
             TypeBags.unregister("disc")
             TypeBags.byName("disc").shouldNotBeNull()
             // Discovering the same loader again changes nothing.
             TypeBags.discover(TypeBag::class.java.classLoader)
             TypeBags.all.count { it.name == "disc" } shouldBe 1
+        }
+
+        test("a discovered bag is created when first referred to, with the bags it requires and no other") {
+            fun active(n: String) = TypeBags.isActive(n)
+            // preload=true: created at discovery.
+            active("preloaded").shouldBeTrue()
+            Created.counts["preloaded"] shouldBe 1
+            // The others are available, not created.
+            TypeBags.available.containsAll(listOf("lazybase", "lazytop", "lazyother")).shouldBeTrue()
+            listOf("lazybase", "lazytop", "lazyother").forEach { active(it).shouldBeFalse(); Created.counts[it].shouldBeNull() }
+            TypeBags.all.none { it.name.startsWith("lazy") }.shouldBeTrue()
+            // Questions about other names create nothing; the catalog answers what a lazy bag offers.
+            TypeBags.literal("nothing").shouldBeNull()
+            TypeBags.typeNamed("Nothing").shouldBeNull()
+            TypeBags.function("nothing").shouldBeNull()
+            TypeBags.typeFor("text").shouldBeNull()
+            TypeBags.hasInactiveMember("stacked").shouldBeTrue()
+            TypeBags.hasInactiveMember("nothing").shouldBeFalse()
+            ("windy" in TypeBags.valueNames).shouldBeTrue()
+            listOf("lazybase", "lazytop", "lazyother").forEach { Created.counts[it].shouldBeNull() }
+            // A value of a bag's class refers to that bag; the bag that extends it is not needed yet.
+            TypeBags.typeFor(Pebble(3))!!.name shouldBe "Pebble"
+            active("lazybase").shouldBeTrue()
+            active("lazytop").shouldBeFalse()
+            TypeBags.member(Pebble(3), "size")!!.invoke(Pebble(3), emptyList()) shouldBe 3
+            active("lazytop").shouldBeFalse()
+            // A member another bag adds refers to that bag.
+            TypeBags.member(Pebble(3), "stacked")!!.invoke(Pebble(3), emptyList()) shouldBe 6
+            active("lazytop").shouldBeTrue()
+            (Ki.parse(".cairn(2)") as Cairn).n shouldBe 2
+            // Unrelated bags stay as they were.
+            active("lazyother").shouldBeFalse()
+            Created.counts["lazyother"].shouldBeNull()
+            TypeBags.constant("windy") shouldBe 7
+            active("lazyother").shouldBeTrue()
+            listOf("lazybase", "lazytop", "lazyother", "preloaded").forEach { Created.counts[it] shouldBe 1 }
+        }
+
+        test("a literal or function refers to its bag, which brings the bags it requires") {
+            // lazytop requires lazybase: asking for lazytop by name makes both (they may be active already).
+            TypeBags.activate("lazytop").shouldNotBeNull()
+            TypeBags.isActive("lazybase").shouldBeTrue()
+            TypeBags.function("pebbles")!!.invoke(listOf(4)) shouldBe Pebble(4)
+            TypeBags.activate("nowhere").shouldBeNull()
+        }
+
+        test("manifests: what discovery reads, checked against the bag") {
+            val top = TypeBags.byName("lazytop")!!
+            TypeBags.checkManifest(top).shouldBeEmpty()
+            val text = TypeBags.manifestOf(top)
+            text shouldContain "name=lazytop\n"
+            text shouldContain "requires=lazybase\n"
+            text shouldContain "type.Cairn=io.kixi.types.Cairn cairn\n"
+            text shouldContain "extends.Pebble=stacked\n"
+            TypeBags.checkManifest(TypeBags.byName("lazybase")!!).shouldBeEmpty()
+            val missing = TypeBags.checkManifest(bag("nomanifest")).joinToString("\n")
+            missing shouldContain "nomanifest: no manifest at META-INF/ki/bags/"
+            missing shouldContain "name=nomanifest"
         }
 
         test("lookups from many threads while bags come and go") {

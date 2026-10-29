@@ -7,10 +7,13 @@ import kotlin.reflect.KClass
  * biology, ...), which KD, KS, KQ and RevDB pick up without knowing the domain.
  *
  * Bags are found by [TypeBags]: registered with [TypeBags.register], or discovered
- * with `ServiceLoader` from `META-INF/services/io.kixi.types.TypeBag`. A
- * discovered bag needs a public no-argument constructor; a Kotlin `object` is
- * registered with [TypeBags.register], or listed through a small class that
- * delegates to it.
+ * from `META-INF/services/io.kixi.types.TypeBag`, which lists the bag's class, and
+ * its manifest, `META-INF/ki/bags/<bag class>.properties` ([TypeBags.manifestOf]
+ * writes it). Discovery reads only the manifest; the bag is created the first time
+ * something refers to it (its literal, a type or function name, one of its values),
+ * unless the manifest says `preload=true`. A discovered bag needs a public
+ * no-argument constructor; a Kotlin `object` is registered with [TypeBags.register],
+ * or listed through a small class that delegates to it.
  *
  * Names are global: two bags may not share a bag name, a type name, a literal
  * name, or a function or constant name (a bag's functions and constants share one

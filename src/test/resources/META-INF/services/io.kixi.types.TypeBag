@@ -1,8 +1,14 @@
-# Test type bags discovered through ServiceLoader (TypeBagsTest).
-# The missing class, the clash, the missing requirement and the throwing getter are deliberate: each must
-# be skipped and reported in TypeBags.problems without hiding DiscoveredBag.
+# Test type bags discovered through their manifests in META-INF/ki/bags (TypeBagsTest).
+# The missing manifest, the clash, the missing requirement, the throwing getter and the stale manifest are
+# deliberate: each must be skipped and reported in TypeBags.problems without hiding DiscoveredBag.
+# The lazy bags are created only when something refers to them; PreloadedBag at discovery.
 io.kixi.types.DoesNotExist
 io.kixi.types.DiscoveredBag
 io.kixi.types.ClashingBag
 io.kixi.types.NeedyBag
 io.kixi.types.ThrowingBag
+io.kixi.types.LazyBaseBag
+io.kixi.types.LazyTopBag
+io.kixi.types.LazyOtherBag
+io.kixi.types.PreloadedBag
+io.kixi.types.StaleBag

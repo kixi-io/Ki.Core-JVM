@@ -198,3 +198,70 @@ class NeedyBag : TypeBag {
     override val requires = listOf("nowhere")
     override val types = emptyList<ValueType<*>>()
 }
+
+// ---- bags activated when first referred to (TypeBagsTest, loading on reference; type bags design 13)
+
+class Pebble(val n: Int) { override fun equals(other: Any?) = other is Pebble && other.n == n; override fun hashCode() = n }
+class Cairn(val n: Int)
+class Kite(val n: Int)
+class Anchor(val n: Int)
+class Buoy(val n: Int)
+
+/** A tiny value type with a literal `.name(n)`, for the bags below. */
+private fun <T : Any> tiny(typeName: String, literal: String, cls: kotlin.reflect.KClass<T>, make: (Int) -> T, n: (T) -> Int,
+                          members: List<Member<T>> = emptyList()): ValueType<T> = object : ValueType<T> {
+    override val name = typeName
+    override val kotlinClass = cls
+    override val literals = listOf(literal)
+    override fun parse(literal: String) = make(TypeBags.stringOrToken(TypeBags.inside(literal)).toInt())
+    override fun format(value: T) = ".$literal(${n(value)})"
+    override fun encode(value: T) = byteArrayOf(n(value).toByte())
+    override fun decode(bytes: ByteArray, version: Int) = make(bytes[0].toInt())
+    override val members = members
+}
+
+/** Counts how many times each test bag below was created, so a test can tell it was not. */
+object Created { val counts = java.util.concurrent.ConcurrentHashMap<String, Int>(); fun note(n: String) { counts.merge(n, 1, Int::plus) } }
+
+/** `lazybase`: Pebble (`.pebble(3)`, member `size`), function `pebbles`. Activated only when referred to. */
+class LazyBaseBag : TypeBag {
+    init { Created.note("lazybase") }
+    override val name = "lazybase"
+    override val version = 1
+    override val types = listOf(tiny("Pebble", "pebble", Pebble::class, ::Pebble, { it.n }, listOf(Member<Pebble>("size", null) { p, _ -> p.n })))
+    override val functions = listOf(BagFunction("pebbles", 1..1) { a -> Pebble((a[0] as Number).toInt()) })
+}
+
+/** `lazytop` requires `lazybase`: Cairn (`.cairn(2)`), and member `stacked` on Pebble. */
+class LazyTopBag : TypeBag {
+    init { Created.note("lazytop") }
+    override val name = "lazytop"
+    override val version = 1
+    override val requires = listOf("lazybase")
+    override val types = listOf(tiny("Cairn", "cairn", Cairn::class, ::Cairn, { it.n }))
+    override val extensions: Map<String, List<Member<*>>> = mapOf("Pebble" to listOf(Member<Pebble>("stacked", null) { p, _ -> p.n * 2 }))
+}
+
+/** `lazyother`: Kite (`.kite(1)`), constant `windy`. Unrelated to the two above. */
+class LazyOtherBag : TypeBag {
+    init { Created.note("lazyother") }
+    override val name = "lazyother"
+    override val version = 1
+    override val types = listOf(tiny("Kite", "kite", Kite::class, ::Kite, { it.n }))
+    override val constants: Map<String, Any> = mapOf("windy" to 7)
+}
+
+/** `preloaded`: Anchor (`.anchor(1)`); its manifest says preload=true. */
+class PreloadedBag : TypeBag {
+    init { Created.note("preloaded") }
+    override val name = "preloaded"
+    override val version = 1
+    override val types = listOf(tiny("Anchor", "anchor", Anchor::class, ::Anchor, { it.n }))
+}
+
+/** `stale`: its manifest names a literal the bag no longer has, so activation refuses it. */
+class StaleBag : TypeBag {
+    override val name = "stale"
+    override val version = 1
+    override val types = listOf(tiny("Buoy", "buoy", Buoy::class, ::Buoy, { it.n }))
+}
