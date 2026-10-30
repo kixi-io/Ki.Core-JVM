@@ -57,6 +57,19 @@ class UnitTest : FunSpec({
             Unit.getUnit("mg") shouldBe Unit.mg
         }
 
+        test("a liter is written 1.L, since 1L is a Long") {
+            Quantity.parse("1.L") shouldBe Quantity.parse("1ℓ")
+            Quantity.parse("2.5.L").toString() shouldBe "2.5ℓ"
+            Quantity.parse("-0.5.L").toString() shouldBe "-0.5ℓ"
+            Quantity.parse("1_000.L").toString() shouldBe "1000ℓ"
+            Quantity.parse("1e3.L") shouldBe Quantity.parse("1000ℓ")
+            Quantity.parse("1.5e(3).L") shouldBe Quantity.parse("1500ℓ")
+            Quantity.parse("1.L:d").value shouldBe 1.0
+            (Quantity.parse("1.L") as Quantity<io.kixi.uom.Volume>).compareTo(Quantity.parse("1000mL") as Quantity<io.kixi.uom.Volume>) shouldBe 0
+            Unit.getUnit("L") shouldBe null           // a bare L stays a Long's suffix
+            io.kixi.Measure.parse("1±0.1.L").toString() shouldBe "1±0.1ℓ"
+        }
+
         test("getUnit handles alternate symbols") {
             Unit.getUnit("LT") shouldBe Unit.L  // Liter alternate
             Unit.getUnit("mL") shouldBe Unit.mL

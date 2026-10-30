@@ -776,7 +776,7 @@ class Quantity<T : Unit> : Comparable<Quantity<T>> {
             if (text.isBlank())
                 throw NumberFormatException("Quantity string cannot be empty.")
 
-            val cleaned = text.replace("_", "")
+            val cleaned = dotLiter(text.replace("_", ""))
             val len = cleaned.length
 
             // Find where the unit symbol starts by parsing through the number portion
@@ -889,6 +889,18 @@ class Quantity<T : Unit> : Comparable<Quantity<T>> {
 
             return Pair(numValue, unit)
         }
+
+        /**
+         * The liter written in ASCII, `1.L`: `L` after a number is a Long's
+         * suffix (`1L`), so the liter puts a dot between the number and the `L`
+         * (`1.L`, `2.5.L`, `1e3.L`, `-0.5.L`, `1.L:d`). Read as `ℓ`, which is what
+         * a liter always prints as. `LT` and `ℓ` are the other spellings.
+         */
+        private fun dotLiter(text: String): String =
+            DOT_LITER.matchEntire(text)?.let { it.groupValues[1] + "ℓ" + it.groupValues[2] } ?: text
+
+        /** A number (ending in a digit, or `)` for `e(3)`), then `.L`, then an optional type specifier. */
+        private val DOT_LITER = Regex("""^(.*[0-9)])\.L(:[A-Za-z])?$""")
 
         /**
          * Normalizes Ki scientific notation to standard Java format.

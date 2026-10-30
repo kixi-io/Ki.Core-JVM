@@ -246,7 +246,9 @@ abstract class Unit(
 
         /**
          * We have to use ℓ to avoid a conflict with L for Long integer literals.
-         * LT is accepted when parsing, but ℓ is always used for output.
+         * A liter literal can also be written `1.L` (a dot between the number
+         * and the L, so it is not the Long `1L`; see `Quantity.parse`) or
+         * `1LT`. ℓ is always used for output.
          */
         val L = addUnit(Volume("ℓ", Dec(".001")))
 
