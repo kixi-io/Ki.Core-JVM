@@ -70,6 +70,19 @@ class UnitTest : FunSpec({
             io.kixi.Measure.parse("1±0.1.L").toString() shouldBe "1±0.1ℓ"
         }
 
+        test("a unit named on its own may be a plain L (5mL as L)") {
+            Unit.getStandaloneUnit("L") shouldBe Unit.L
+            Unit.getStandaloneUnit("mL") shouldBe Unit.mL      // otherwise as getUnit
+            Unit.getStandaloneUnit("LT") shouldBe Unit.L
+            Unit.getStandaloneUnit("Lx") shouldBe null
+            Unit.parse("L") shouldBe Unit.L                     // parse reads a unit standing alone
+            Unit.parseOrNull(" L ") shouldBe Unit.L
+            (Quantity.parse("2500mL") as Quantity<io.kixi.uom.Volume>).convertTo(Unit.parse("L") as io.kixi.uom.Volume)
+                .toString() shouldBe "2.5ℓ"
+            Unit.getUnit("L") shouldBe null                     // after a number, L is still a Long's suffix
+            shouldThrow<NoSuchUnitException> { Quantity.parse("1L") }
+        }
+
         test("getUnit handles alternate symbols") {
             Unit.getUnit("LT") shouldBe Unit.L  // Liter alternate
             Unit.getUnit("mL") shouldBe Unit.mL

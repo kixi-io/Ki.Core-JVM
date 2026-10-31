@@ -248,7 +248,9 @@ abstract class Unit(
          * We have to use ℓ to avoid a conflict with L for Long integer literals.
          * A liter literal can also be written `1.L` (a dot between the number
          * and the L, so it is not the Long `1L`; see `Quantity.parse`) or
-         * `1LT`. ℓ is always used for output.
+         * `1LT`. A unit named on its own, with no number before it, may be a
+         * plain `L` (`5mL as L`; see [getStandaloneUnit]). ℓ is always used
+         * for output.
          */
         val L = addUnit(Volume("ℓ", Dec(".001")))
 
@@ -393,6 +395,13 @@ abstract class Unit(
         /**
          * Retrieves a unit by its symbol, handling common aliases and ASCII alternatives.
          *
+         * This is the lookup for the unit part of a quantity literal, the
+         * text after the number. A plain `L` is not a unit here: `1L` is a
+         * Long in KD and KS, as in Kotlin, and KD tries a unit before a
+         * Long's type suffix, so an `L` alias would turn every `1L` into a
+         * liter. For a unit named on its own (a conversion target such as
+         * `5mL as L`) use [getStandaloneUnit], which also reads `L`.
+         *
          * @param symbol The unit symbol to look up
          * @return The matching Unit, or null if not found
          */
@@ -451,6 +460,30 @@ abstract class Unit(
         }
 
         /**
+         * The unit named by [symbol] when it stands on its own, with no
+         * number before it: the target of a conversion (`5mL as L` in KS and
+         * Boa, `q.to("L")`, KQ's `to(L)`), a unit given as text
+         * (`Quantity(5, "L")` in Boa) or a schema's `unit="L"`.
+         *
+         * This is [getUnit] plus one spelling: a plain `L` is the liter
+         * ([L], printed `ℓ`). After a number `L` cannot mean the liter, since
+         * `1L` is a Long (so a liter literal is `1.L`, `1ℓ` or `1LT`), but a
+         * unit standing alone has no number to make it a Long, and the liter
+         * is the only thing it can mean.
+         *
+         * ```kotlin
+         * Unit.getStandaloneUnit("L")   // Unit.L (ℓ)
+         * Unit.getStandaloneUnit("mL")  // mℓ, as getUnit
+         * Unit.getUnit("L")             // null: after a number, L is a Long
+         * ```
+         *
+         * @param symbol The unit symbol, without a number
+         * @return The matching Unit, or null if not found
+         */
+        @JvmStatic
+        fun getStandaloneUnit(symbol: String): Unit? = if (symbol == "L") L else getUnit(symbol)
+
+        /**
          * Retrieves a currency unit by its prefix symbol.
          *
          * @param prefix The currency prefix symbol (e.g., '$', '€', '¥')
@@ -499,8 +532,11 @@ abstract class Unit(
         /**
          * Parse a unit symbol string into a Unit instance.
          *
+         * The symbol stands on its own, so it is read by
+         * [getStandaloneUnit]: a plain `L` is the liter here.
+         *
          * Handles common aliases and ASCII alternatives:
-         * - `LT` → `ℓ` (liter)
+         * - `L`, `LT` → `ℓ` (liter)
          * - `mL` → `mℓ` (milliliter)
          * - `dC` → `°C` (Celsius), `dF` → `°F` (Fahrenheit)
          * - `um` → `µm` (micrometer)
@@ -526,7 +562,7 @@ abstract class Unit(
             if (trimmed.isEmpty())
                 throw ParseException("Unit symbol cannot be empty.", index = 0)
 
-            return getUnit(trimmed)
+            return getStandaloneUnit(trimmed)
                 ?: throw ParseException("Unknown unit symbol: $trimmed")
         }
 
